@@ -1,0 +1,4 @@
+# Versions used to create the released MESS realtime package.
+coremltools==9.0
+numpy==2.0.2
+torch==2.8.0

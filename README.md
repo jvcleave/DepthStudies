@@ -15,8 +15,13 @@ MPSGraph on Apple silicon. Its tagged release provides ready-to-load
 
 See [the macOS 27 realtime study](studies/realtime-depth-macos27/findings.md) for
 results and limitations, [the artifact manifest](manifests/mpsgraph-depth-models-macos27-v0.1.0.json)
-for exact contracts and provenance, and [the build script](scripts/build_mpsgraph_packages.sh)
-for conversion commands.
+for exact contracts and provenance, and [the model build workflows](scripts/README.md)
+for end-to-end export and conversion commands.
+
+Each model family has its own entry point. Depth Anything V2 carries its fixed
+source patch and exporter, DA3 pins the tagged conversion fork and its numerical
+validator, and ZipDepth carries its pinned exporter. They share only the final
+one-package `mpsgraphtool` helper.
 
 ## Compatibility
 
