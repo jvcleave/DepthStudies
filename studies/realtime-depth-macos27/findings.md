@@ -72,11 +72,18 @@ The three Depth Anything Core ML sources fail `mpsgraphtool` conversion for
 macOS 26 and earlier. Their generated instance-normalization operation uses
 mean, variance, gamma, and beta operands available from MPSGraph package target
 version 1.3.8; Xcode 27 maps macOS 26 to 1.3.3 and macOS 15 to 1.2.1. They convert
-successfully with a macOS 27 target.
+successfully with a macOS 27 target. This restriction applies to the generated
+MPSGraph packages. All four Core ML source packages support macOS 15: DA2 and
+ZipDepth use the Core ML specification target corresponding to macOS 13, and DA3
+uses the target corresponding to macOS 15.
 
 ZipDepth converts successfully with a macOS 15 target. The release keeps its
 macOS 27 build so every artifact matches the benchmark configuration. A future
 lower-target ZipDepth release should be tested on the oldest claimed system.
+
+See [MPSGraph deployment compatibility](compatibility.md) for the full tested
+matrix, reproduced diagnostics, build-versus-runtime distinction, reproduction
+command, and possible lower-target approaches.
 
 ## Next measurement
 

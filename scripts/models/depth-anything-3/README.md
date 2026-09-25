@@ -18,4 +18,10 @@ pins that implementation and supplies immutable weights rather than duplicating
 the exporter.
 
 Both generated MPSGraph packages require a macOS 27 target with the current
-operator lowering.
+operator lowering. The Core ML exports use `ct.target.iOS18`, which Core ML Tools
+aliases to macOS 15, so both `.mlpackage` files support macOS 15. The later
+macOS 27 constraint belongs to MPSGraph serialization. Both sizes retain an
+instance-normalization form that cannot be downgraded to the tested macOS 26 or
+15 graph-package targets. See the
+[deployment compatibility report](../../../studies/realtime-depth-macos27/compatibility.md)
+for the exact diagnostic and compatibility matrix.

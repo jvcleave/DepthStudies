@@ -16,3 +16,10 @@ DA2_SOURCE_ROOT=/Users/jvcleave/Documents/WORK_IN_PROGRESS/MACHINE_LEARNING/Dept
 That checkout must remain at the recorded upstream revision and its `dpt.py`
 must match the checked-in Core ML patch. The script accepts the existing
 untracked checkpoints and model artifacts without modifying them.
+
+The Core ML export uses `ct.target.iOS16`, which Core ML Tools aliases to macOS
+13, so the `.mlpackage` supports macOS 15. The derived graph defaults to macOS
+27 because the tested `mpsgraphtool` cannot downgrade its generated
+instance-normalization form to the package targets for macOS 26 or 15. See the
+[deployment compatibility report](../../../studies/realtime-depth-macos27/compatibility.md)
+for the exact diagnostic and compatibility matrix.

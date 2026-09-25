@@ -14,7 +14,8 @@ packages and ready-to-load `.mpsgraphpackage` archives for:
 - ZipDepth Base NPU, 384 x 384.
 
 See [the macOS 27 realtime study](studies/realtime-depth-macos27/findings.md) for
-results and limitations, [the artifact manifest](manifests/mpsgraph-depth-models-macos27-v0.1.0.json)
+results and limitations, [the deployment compatibility report](studies/realtime-depth-macos27/compatibility.md)
+for the macOS 27 boundary and reproduced diagnostics, [the artifact manifest](manifests/mpsgraph-depth-models-macos27-v0.1.0.json)
 for exact contracts and provenance, and [the model build workflows](scripts/README.md)
 for end-to-end export and conversion commands.
 
@@ -29,6 +30,8 @@ The v0.1.0 graph packages were created by Xcode 27.0's `mpsgraphtool`, package
 format 7.0.63, with a macOS 27.0 deployment target. They have only been executed
 on an Apple M1 Max running macOS 27.0. The corresponding `.mlpackage` archives
 are included as the exact Core ML inputs used to create those graph packages.
+All four Core ML packages support macOS 15: DA2 and ZipDepth declare the Core ML
+specification target corresponding to macOS 13, while DA3 declares macOS 15.
 
 ## Repository scope
 
