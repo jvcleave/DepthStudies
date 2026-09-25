@@ -1,10 +1,11 @@
-Experimental fixed-shape MPSGraph depth packages used by the MESS macOS 27 depth study.
+Experimental fixed-shape Core ML source packages and their derived MPSGraph depth packages used by the MESS macOS 27 depth study.
 
-All four packages were generated with Xcode 27.0 `mpsgraphtool`, package format
-7.0.63, and a macOS 27.0 deployment target. They were executed on an Apple M1 Max
-running macOS 27.0. The Depth Anything graphs cannot currently be serialized for
-macOS 26 or earlier; ZipDepth can be rebuilt for macOS 15 but the attached asset
-matches the macOS 27 benchmark build.
+Each model is available as both `.mlpackage.zip` and `.mpsgraphpackage.zip`. The
+four MPSGraph packages were generated with Xcode 27.0 `mpsgraphtool`, package
+format 7.0.63, and a macOS 27.0 deployment target. They were executed on an Apple
+M1 Max running macOS 27.0. The Depth Anything graphs cannot currently be
+serialized for macOS 26 or earlier; ZipDepth can be rebuilt for macOS 15, but the
+attached graph asset matches the macOS 27 benchmark build.
 
 ## Realtime MESS medians
 

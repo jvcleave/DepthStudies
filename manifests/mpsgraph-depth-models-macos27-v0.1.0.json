@@ -42,7 +42,10 @@
       "coreml_weight_sha256": "14b9132bafdcf2326a59143679e99756f4e5968fa4d0cf56a70426bc9c3ef5eb",
       "release_asset": "DepthAnythingV2SmallRealtime.mpsgraphpackage.zip",
       "release_asset_bytes": 45763963,
-      "release_asset_sha256": "faf0812b3933117ba6aed231c6fd0afaf2d88c70c770ef3200ac92a587d6d71e"
+      "release_asset_sha256": "faf0812b3933117ba6aed231c6fd0afaf2d88c70c770ef3200ac92a587d6d71e",
+      "coreml_release_asset": "DepthAnythingV2SmallRealtime.mlpackage.zip",
+      "coreml_release_asset_bytes": 45775475,
+      "coreml_release_asset_sha256": "bdf7a856ed8219c8433ad9fc8fce8a01c5395401baf8d94263d5638376676875"
     },
     {
       "name": "DepthAnything3SmallCameraTokenImageF16",
@@ -76,7 +79,10 @@
       "coreml_weight_sha256": "bc8c1ceaaf67209bb7ed87913a221d6e235a763b8958be39718720ecfcec32ff",
       "release_asset": "DepthAnything3SmallCameraTokenImageF16.mpsgraphpackage.zip",
       "release_asset_bytes": 46394990,
-      "release_asset_sha256": "2c8199505333be82faa2d05af2ba0bb462a0d0b43df7bfbf3cedcf0d38111126"
+      "release_asset_sha256": "2c8199505333be82faa2d05af2ba0bb462a0d0b43df7bfbf3cedcf0d38111126",
+      "coreml_release_asset": "DepthAnything3SmallCameraTokenImageF16.mlpackage.zip",
+      "coreml_release_asset_bytes": 46412783,
+      "coreml_release_asset_sha256": "723bcafa91e63ad7ce7d6da32fb5b478d3ad87b82ad240118cd9ee68d78ec5d2"
     },
     {
       "name": "DepthAnything3SmallCameraToken392x392ImageF16",
@@ -110,7 +116,10 @@
       "coreml_weight_sha256": "f5359259281a50c5d1647f39f7a531cdd5f35e2c207dacfc30821358494466ae",
       "release_asset": "DepthAnything3SmallCameraToken392x392ImageF16.mpsgraphpackage.zip",
       "release_asset_bytes": 45937539,
-      "release_asset_sha256": "7f9718608f84e05ecaa5a6fcf854571362abdfe6bf955548470fc1d8fa77ad7e"
+      "release_asset_sha256": "7f9718608f84e05ecaa5a6fcf854571362abdfe6bf955548470fc1d8fa77ad7e",
+      "coreml_release_asset": "DepthAnything3SmallCameraToken392x392ImageF16.mlpackage.zip",
+      "coreml_release_asset_bytes": 45953730,
+      "coreml_release_asset_sha256": "1bbf263732300a0a01335ce5bc929d98ad5c962a5a568301ec6835c25491522e"
     },
     {
       "name": "ZipDepthBaseNPU384x384",
@@ -149,7 +158,10 @@
       },
       "release_asset": "ZipDepthBaseNPU384x384.mpsgraphpackage.zip",
       "release_asset_bytes": 11428519,
-      "release_asset_sha256": "f6daaa1af87bb7a8e3eb942d9bada68ae1031772de7e934491d03d9e9b2873b3"
+      "release_asset_sha256": "f6daaa1af87bb7a8e3eb942d9bada68ae1031772de7e934491d03d9e9b2873b3",
+      "coreml_release_asset": "ZipDepthBaseNPU384x384.mlpackage.zip",
+      "coreml_release_asset_bytes": 11428552,
+      "coreml_release_asset_sha256": "c67df37cb0bd6e1dc3ac5466d55c6706b2326ca40df2e80ace179953d2bcb601"
     }
   ]
 }

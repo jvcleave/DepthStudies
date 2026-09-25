@@ -5,8 +5,8 @@ runtime artifacts, and measurements used while evaluating depth engines for
 MESS.
 
 The first study compares four fixed-shape Core ML models executed through
-MPSGraph on Apple silicon. Its tagged release provides ready-to-load
-`.mpsgraphpackage` archives for:
+MPSGraph on Apple silicon. Its tagged release provides the Core ML source
+packages and ready-to-load `.mpsgraphpackage` archives for:
 
 - Depth Anything V2 Small, 448 x 336;
 - Depth Anything 3 Small, 518 x 518;
@@ -27,8 +27,8 @@ one-package `mpsgraphtool` helper.
 
 The v0.1.0 graph packages were created by Xcode 27.0's `mpsgraphtool`, package
 format 7.0.63, with a macOS 27.0 deployment target. They have only been executed
-on an Apple M1 Max running macOS 27.0. Treat them as experimental research
-artifacts rather than portable replacements for their Core ML source packages.
+on an Apple M1 Max running macOS 27.0. The corresponding `.mlpackage` archives
+are included as the exact Core ML inputs used to create those graph packages.
 
 ## Repository scope
 
