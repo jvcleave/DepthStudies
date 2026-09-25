@@ -1,0 +1,4 @@
+.DS_Store
+/release-assets/
+**/__pycache__/
+*.pyc
