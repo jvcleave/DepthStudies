@@ -14,13 +14,17 @@ saved.
 
 ## Test contract
 
-- [ ] Use a Release build from MESS app commit `d73f27976` and bundle commit
-  `3a30326`, or a later revision that retains the depth capture metadata.
+- [ ] Use a Release build from MESS app commit `d956b45736` and bundle commit
+  `08304c3`, or a later revision that retains the depth capture metadata and
+  the macOS 15-compatible ZipDepth 896 graph.
 - [ ] Record the Mac model, macOS build, Xcode build, MESS app commit, bundle
   commit, output size, target FPS, source identity, source segment, and effect
   preset once for the batch.
 - [ ] Use the same prerecorded source, source segment, output size, target FPS,
   and effect settings for every run in a comparison.
+- [ ] Keep exactly one identical depth-consuming effect or preset active in
+  every run. Disable every other effect and all foreground-mask,
+  person-segmentation, and face-analysis work.
 - [ ] Select the engine in App Settings and relaunch MESS before each run. The
   active depth model and backend are fixed during app startup.
 - [ ] Let the depth output and stats overlay stabilize before starting
@@ -78,6 +82,43 @@ Use these names consistently in run directories and notes.
 
 Run CLEAN first. Repeat only the leading candidates and their direct baselines
 under LOADED. This keeps the batch small while still exposing GPU contention.
+
+## Current run: depth-only MPSGraph sweep
+
+This is the controlled batch planned for the next MESS run. It covers every
+MPSGraph depth option currently exposed in App Settings. Use the rows in this
+order so each FP32/FP16 pair remains adjacent. Capture 60 seconds per row after
+warm-up, using a fresh app launch for every selection.
+
+The package target is part of the result identity. `DEPTH ZIP 896 GRAPH` uses
+the macOS 15-compatible graph; the other graph packages in this batch target
+macOS 27. All can be exercised by the same macOS 27 Release build.
+
+| Run | App Settings button | Fixed input | Graph input | Package target | Existing checklist item |
+| --- | --- | ---: | --- | --- | --- |
+| M01 | `DEPTH V2 GRAPH` | 448 x 336 | FP32 | macOS 27 | A01 |
+| M02 | `DEPTH DA2 F16 GRAPH` | 448 x 336 | FP16 | macOS 27 | A02 |
+| M03 | `DEPTH DA3 392 GRAPH` | 392 x 392 | FP32 | macOS 27 | B02 |
+| M04 | `DEPTH DA3 518 GRAPH` | 518 x 518 | FP32 | macOS 27 | B04 |
+| M05 | `DEPTH ZIP 384 GRAPH` | 384 x 384 | FP32 | macOS 27 | A04 |
+| M06 | `DEPTH ZIP 384 F16 GRAPH` | 384 x 384 | FP16 | macOS 27 | A05 |
+| M07 | `DEPTH ZIP 512 GRAPH` | 512 x 512 | FP32 | macOS 27 | B09 |
+| M08 | `DEPTH ZIP 672 GRAPH` | 672 x 384 | FP32 | macOS 27 | B10 |
+| M09 | `DEPTH ZIP 896 GRAPH` | 896 x 512 | FP32 | macOS 15 | A06 |
+| M10 | `DEPTH ZIP 896 F16 GRAPH` | 896 x 512 | FP16 | macOS 27 | A07 |
+| M11 | `DEPTH ZIP1536 GRAPH` | 1536 x 864 | FP32 | macOS 27 | A08 |
+| M12 | `DEPTH ZIP1536 F16 GRAPH` | 1536 x 864 | FP16 | macOS 27 | A09 |
+| M13 | `DEPTH ZIP1080 GRAPH` | 1920 x 1088 | FP32 | macOS 27 | A10 |
+| M14 | `DEPTH ZIP1080 F16 GRAPH` | 1920 x 1088 | FP16 | macOS 27 | A11 |
+
+For each exported capture, record its M-number with the generated directory
+path. The `capture.configuration` event must agree with the intended row before
+the run is accepted. Completing a row under this contract also completes its
+referenced A/B checklist item; do not rerun it just to satisfy both sections.
+
+If time permits, repeat only close or surprising pairs in reverse order. That
+is more useful for checking thermal or run-order drift than immediately
+repeating the full 14-run sweep.
 
 ## Batch A: optimized FP16 graph input
 

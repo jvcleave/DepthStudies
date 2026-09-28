@@ -26,6 +26,41 @@ faster and its median complete depth-source time was about 5.9x faster. DA2's
 complete depth-source median was about 1.9x faster than captured DA3 and 3.2x
 slower than ZipDepth.
 
+## Controlled depth-only MPSGraph sweep
+
+The next batch replaces the loaded, incompletely identified rows above with a
+controlled Release run. Every row uses the same prerecorded source and segment,
+output dimensions, 60 fps target, and one identical depth-consuming effect or
+preset. All other effects, foreground/person analysis, and face analysis are
+disabled. Each selection gets a fresh launch, a warm-up period, and a 60-second
+`CAPTURE LOG` window.
+
+The package target is included because the standard ZipDepth 896 graph now
+targets macOS 15, while its FP16 comparison and the other graphs in this batch
+target macOS 27. The runtime machine remains macOS 27.
+
+| Run | MPSGraph engine | Fixed input | Graph input | Package target | Capture | Median model | Median depth source | Depth-source p90 | Median presentation |
+| --- | --- | ---: | --- | --- | --- | ---: | ---: | ---: | ---: |
+| M01 | Depth Anything V2 | 448 x 336 | FP32 | macOS 27 | Pending | — | — | — | — |
+| M02 | Depth Anything V2 | 448 x 336 | FP16 | macOS 27 | Pending | — | — | — | — |
+| M03 | Depth Anything 3 Small | 392 x 392 | FP32 | macOS 27 | Pending | — | — | — | — |
+| M04 | Depth Anything 3 Small | 518 x 518 | FP32 | macOS 27 | Pending | — | — | — | — |
+| M05 | ZipDepth Base NPU | 384 x 384 | FP32 | macOS 27 | Pending | — | — | — | — |
+| M06 | ZipDepth Base NPU | 384 x 384 | FP16 | macOS 27 | Pending | — | — | — | — |
+| M07 | ZipDepth Base NPU | 512 x 512 | FP32 | macOS 27 | Pending | — | — | — | — |
+| M08 | ZipDepth Base NPU | 672 x 384 | FP32 | macOS 27 | Pending | — | — | — | — |
+| M09 | ZipDepth Base NPU | 896 x 512 | FP32 | macOS 15 | Pending | — | — | — | — |
+| M10 | ZipDepth Base NPU | 896 x 512 | FP16 | macOS 27 | Pending | — | — | — | — |
+| M11 | ZipDepth Base NPU | 1536 x 864 | FP32 | macOS 27 | Pending | — | — | — | — |
+| M12 | ZipDepth Base NPU | 1536 x 864 | FP16 | macOS 27 | Pending | — | — | — | — |
+| M13 | ZipDepth Base NPU | 1920 x 1088 | FP32 | macOS 27 | Pending | — | — | — | — |
+| M14 | ZipDepth Base NPU | 1920 x 1088 | FP16 | macOS 27 | Pending | — | — | — | — |
+
+The operational checklist and exact App Settings labels are in the
+[Realtime Depth Test TODO List](../../TEST_TODO_LIST.md). Once captures are
+available, accept each row only after its `capture.configuration` event matches
+the expected backend, variant, input type, and dimensions.
+
 ## How the realtime capture was measured
 
 MESS instrumented each completed depth request while its diagnostic capture was
@@ -175,20 +210,16 @@ See [MPSGraph deployment compatibility](compatibility.md) for the full tested
 matrix, reproduced diagnostics, build-versus-runtime distinction, reproduction
 command, and possible lower-target approaches.
 
-## Next measurement
+## Measurements after the depth-only sweep
 
-A controlled DA2 comparison should use three separate launches:
+Use the controlled MPSGraph batch to choose the resolutions and FP32/FP16 pairs
+worth retaining. Then measure their direct Core ML controls under the same
+depth-only contract. A later DA2 compute-unit diagnostic can use separate
+launches for fixed `.cpuAndGPU` and explicit `.cpuAndNeuralEngine`; production
+DA2 should remain fixed to `.cpuAndGPU` unless new measurements reverse the
+existing result.
 
-1. Core ML with `.cpuAndGPU`;
-2. Core ML with an explicit diagnostic `.cpuAndNeuralEngine` selection; and
-3. MPSGraph `.level0`.
-
-Each launch should replay the same source segment at the same output size and
-target frame rate, with identical foreground-mask, face, and effect settings.
-Allow the model to warm up before starting a capture, then record the same
-duration for every route. Capture metadata should include the exact model,
-backend, Core ML compute units, source identity, output dimensions, and enabled
-analysis workloads. The stats stream should also record depth request and
-completion deltas so delivered depth fps can be measured directly. Production
-DA2 should remain fixed to `.cpuAndGPU`; the Neural Engine route should be an
-explicit diagnostic choice rather than workload-driven switching.
+The stats stream should eventually record depth request, completion, and
+superseded-request deltas so delivered depth cadence can be measured directly.
+Until those fields exist, report these captures as sampled latency and
+presentation-rate measurements rather than delivered depth fps.
