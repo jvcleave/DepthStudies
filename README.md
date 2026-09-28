@@ -4,9 +4,12 @@ DepthStudies collects reproducible Apple-platform depth-model conversions,
 runtime artifacts, and measurements used while evaluating depth engines for
 MESS.
 
-The [full performance comparison](studies/depth-performance-comparison.md)
-collects every checked-in realtime capture and standalone timing result while
-keeping results from different harnesses separate.
+Start with the [comprehensive 1080p depth application study](studies/1080p-depth-application-study.md).
+It follows the workflow from a 1920 x 1080 source image to fixed-shape depth
+inference and use alongside face detection and foreground extraction. It
+consolidates candidates, optimizations, performance results, quality evidence,
+recommended sizes, deployment constraints, and the complete measurement tables.
+The existing source reports remain available while the consolidation is reviewed.
 
 The first study and its follow-up optimization work compare fixed-shape Core ML
 models executed through MPSGraph on Apple silicon. The tagged release provides
@@ -20,31 +23,11 @@ MESS-integrated variant:
   1536 x 864, and 1920 x 1088, including planar-FP16 variants at 384 x 384,
   896 x 512, 1536 x 864, and 1920 x 1088.
 
-See [the macOS 27 realtime study](studies/realtime-depth-macos27/findings.md) for
-results and limitations, [the deployment compatibility report](studies/realtime-depth-macos27/compatibility.md)
-for the macOS 27 boundary and reproduced diagnostics, [the artifact manifest](manifests/mpsgraph-depth-models-macos27-v0.1.0.json)
-for exact contracts and provenance, and [the model build workflows](scripts/README.md)
-for end-to-end export and conversion commands.
-
-The [Apple silicon depth optimization plan](studies/apple-silicon-depth-optimization-plan.md)
-turns the initial results into staged Core ML residency, ZipDepth, and DA2
-experiments with explicit quality and performance gates. Its first
-[compute-plan audit](studies/apple-silicon-depth-optimization/compute-plan-findings.md)
-records anticipated CPU, GPU, and Neural Engine placement for six packages.
-The [ZipDepth FP16 input study](studies/apple-silicon-depth-optimization/fp16-input-findings.md)
-documents the first graph-specific candidate and the remaining realtime gate.
-The [DA2 native SDPA study](studies/apple-silicon-depth-optimization/da2-sdpa-findings.md)
-records a conversion-correct but slower fused-attention experiment and keeps
-classic decomposed attention as the selected implementation.
-The [DA2 FP16 input study](studies/apple-silicon-depth-optimization/da2-fp16-input-findings.md)
-halves graph-input bytes and records tied isolated and initial loaded execution.
-The [loaded FP16 comparison](studies/realtime-depth-macos27/loaded-fp16-comparison-2026-09-28.md)
-preserves the first configured DA2 448 x 336 and ZipDepth 1536 x 864 capture
-pairs; the ZipDepth pair favors FP16 by `4.1%` at the complete-path median.
-The [second loaded ZipDepth batch](studies/realtime-depth-macos27/loaded-zipdepth-batch-2-2026-09-28.md)
-adds 512 x 512 and 672 x 384 observations and a paired 896 x 512 result.
-The [DA3 compute-unit study](studies/apple-silicon-depth-optimization/da3-compute-unit-findings.md)
-finds CPU plus GPU faster than CPU plus Neural Engine and `all` at 392 x 392.
+See the [artifact manifest](manifests/mpsgraph-depth-models-macos27-v0.1.0.json)
+for exact contracts and provenance and the [model build workflows](scripts/README.md)
+for end-to-end export and conversion commands. The study's
+[source index](studies/1080p-depth-application-study.md#source-index) links the
+original performance, optimization, loaded-session, and compatibility reports.
 
 Use the [realtime test TODO list](TEST_TODO_LIST.md) to batch the remaining MESS
 comparisons without mixing current app options with experiments that still need
