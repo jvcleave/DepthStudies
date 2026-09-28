@@ -251,6 +251,488 @@
           "runtime_tested": false
         }
       ]
+    },
+    {
+      "name": "DepthAnythingV2SmallRealtimeTensorF16",
+      "upstream": "https://github.com/DepthAnything/Depth-Anything-V2",
+      "reviewed_upstream_revision": "a561b849ebae10a6f5ef49e26c83cbbcd36c71bf",
+      "license": "Apache-2.0",
+      "input": {
+        "data_type": "float16",
+        "layout": "NCHW",
+        "shape": [
+          1,
+          3,
+          336,
+          448
+        ],
+        "range": "0...255 RGB"
+      },
+      "output": {
+        "data_type": "float16",
+        "layout": "NCHW",
+        "shape": [
+          1,
+          1,
+          336,
+          448
+        ]
+      },
+      "mess_output_scale": 0.22,
+      "coreml_weight_sha256": "14b9132bafdcf2326a59143679e99756f4e5968fa4d0cf56a70426bc9c3ef5eb",
+      "release_asset": "DepthAnythingV2SmallRealtimeTensorF16.mpsgraphpackage.zip",
+      "release_asset_bytes": 45688410,
+      "release_asset_sha256": "01625694e2a6204804ba0b9a5cef8a0634aed41b598a7b7313d272f26df3542f",
+      "coreml_release_asset": "DepthAnythingV2SmallRealtimeTensorF16.mlpackage.zip",
+      "coreml_release_asset_bytes": 45697029,
+      "coreml_release_asset_sha256": "07ebe74b95abb28e2362affbbb9b9ac31de7998558531471ffbd46dfd4bc009f",
+      "coreml_compatibility": {
+        "coremltools_target": "iOS16",
+        "macos_equivalent_minimum": "13.0",
+        "supports_macos_15": true
+      },
+      "mpsgraph_conversion_trials": [
+        {
+          "minimum_macos_target": "27.0.0",
+          "conversion_passed": true,
+          "runtime_tested": true
+        },
+        {
+          "minimum_macos_target": "26.0.0",
+          "package_target": "1.3.3",
+          "conversion_passed": false,
+          "failure": "mps.instance_norm operands require package target 1.3.8"
+        },
+        {
+          "minimum_macos_target": "15.0.0",
+          "package_target": "1.2.1",
+          "conversion_passed": false,
+          "failure": "mps.instance_norm operands require package target 1.3.8"
+        }
+      ]
+    },
+    {
+      "name": "ZipDepthBaseNPU384x384TensorF16",
+      "upstream": "https://github.com/fabiotosi92/ZipDepth",
+      "reviewed_upstream_revision": "91f3fd21e131641f51e8d35736d1958350180e3a",
+      "license": "MIT",
+      "input": {
+        "data_type": "float16",
+        "layout": "NCHW",
+        "shape": [
+          1,
+          3,
+          384,
+          384
+        ],
+        "range": "0...255 RGB"
+      },
+      "output": {
+        "data_type": "float16",
+        "layout": "NCHW",
+        "shape": [
+          1,
+          1,
+          384,
+          384
+        ]
+      },
+      "mess_output_scale": 10.0,
+      "coreml_weight_sha256": "43e6718f6903c54145afbc7a9d03a6237577a7bec48ed827f93e4fa87f289f76",
+      "release_asset": "ZipDepthBaseNPU384x384TensorF16.mpsgraphpackage.zip",
+      "release_asset_bytes": 11410615,
+      "release_asset_sha256": "7197ecbd5ea8302ca008e2671c8de320c4bd79c37a29ebe8d899a9fcfc747d75",
+      "coreml_release_asset": "ZipDepthBaseNPU384x384TensorF16.mlpackage.zip",
+      "coreml_release_asset_bytes": 11414162,
+      "coreml_release_asset_sha256": "c6fd42d362a5cc9c670b2849898a8106ee508dd170cf01c974aa6a02a643aab8",
+      "coreml_compatibility": {
+        "coremltools_target": "iOS16",
+        "macos_equivalent_minimum": "13.0",
+        "supports_macos_15": true
+      },
+      "mpsgraph_conversion_trials": [
+        {
+          "minimum_macos_target": "27.0.0",
+          "conversion_passed": true,
+          "runtime_tested": true
+        }
+      ]
+    },
+    {
+      "name": "ZipDepthBaseNPU512x512",
+      "upstream": "https://github.com/fabiotosi92/ZipDepth",
+      "reviewed_upstream_revision": "91f3fd21e131641f51e8d35736d1958350180e3a",
+      "license": "MIT",
+      "input": {
+        "data_type": "float32",
+        "layout": "NCHW",
+        "shape": [
+          1,
+          3,
+          512,
+          512
+        ],
+        "range": "0...255 RGB"
+      },
+      "output": {
+        "data_type": "float16",
+        "layout": "NCHW",
+        "shape": [
+          1,
+          1,
+          512,
+          512
+        ]
+      },
+      "mess_output_scale": 10.0,
+      "coreml_weight_sha256": "43e6718f6903c54145afbc7a9d03a6237577a7bec48ed827f93e4fa87f289f76",
+      "release_asset": "ZipDepthBaseNPU512x512.mpsgraphpackage.zip",
+      "release_asset_bytes": 11410603,
+      "release_asset_sha256": "b263acd9d4df0dcdafeb4ea563ea81168481ce3458929ed02be4bee216be9412",
+      "coreml_release_asset": "ZipDepthBaseNPU512x512.mlpackage.zip",
+      "coreml_release_asset_bytes": 11413923,
+      "coreml_release_asset_sha256": "ca77a6b6715a2b7afb0cc3ed5ba6469533b30d0520d8fa3bde8fe4f78952382f",
+      "coreml_compatibility": {
+        "coremltools_target": "iOS16",
+        "macos_equivalent_minimum": "13.0",
+        "supports_macos_15": true
+      },
+      "mpsgraph_conversion_trials": [
+        {
+          "minimum_macos_target": "27.0.0",
+          "conversion_passed": true,
+          "runtime_tested": true
+        }
+      ]
+    },
+    {
+      "name": "ZipDepthBaseNPU672x384",
+      "upstream": "https://github.com/fabiotosi92/ZipDepth",
+      "reviewed_upstream_revision": "91f3fd21e131641f51e8d35736d1958350180e3a",
+      "license": "MIT",
+      "input": {
+        "data_type": "float32",
+        "layout": "NCHW",
+        "shape": [
+          1,
+          3,
+          384,
+          672
+        ],
+        "range": "0...255 RGB"
+      },
+      "output": {
+        "data_type": "float16",
+        "layout": "NCHW",
+        "shape": [
+          1,
+          1,
+          384,
+          672
+        ]
+      },
+      "mess_output_scale": 10.0,
+      "coreml_weight_sha256": "43e6718f6903c54145afbc7a9d03a6237577a7bec48ed827f93e4fa87f289f76",
+      "release_asset": "ZipDepthBaseNPU672x384.mpsgraphpackage.zip",
+      "release_asset_bytes": 11410615,
+      "release_asset_sha256": "2160283180726d80be883e3082dd9ee58ebe06a61d59909cea615aa9bd0beb10",
+      "coreml_release_asset": "ZipDepthBaseNPU672x384.mlpackage.zip",
+      "coreml_release_asset_bytes": 11413949,
+      "coreml_release_asset_sha256": "cebc91235376da776b13cf78f61565c3059034a32380207d558c123036882947",
+      "coreml_compatibility": {
+        "coremltools_target": "iOS16",
+        "macos_equivalent_minimum": "13.0",
+        "supports_macos_15": true
+      },
+      "mpsgraph_conversion_trials": [
+        {
+          "minimum_macos_target": "27.0.0",
+          "conversion_passed": true,
+          "runtime_tested": true
+        }
+      ]
+    },
+    {
+      "name": "ZipDepthBaseNPU896x512",
+      "upstream": "https://github.com/fabiotosi92/ZipDepth",
+      "reviewed_upstream_revision": "91f3fd21e131641f51e8d35736d1958350180e3a",
+      "license": "MIT",
+      "input": {
+        "data_type": "float32",
+        "layout": "NCHW",
+        "shape": [
+          1,
+          3,
+          512,
+          896
+        ],
+        "range": "0...255 RGB"
+      },
+      "output": {
+        "data_type": "float16",
+        "layout": "NCHW",
+        "shape": [
+          1,
+          1,
+          512,
+          896
+        ]
+      },
+      "mess_output_scale": 10.0,
+      "coreml_weight_sha256": "43e6718f6903c54145afbc7a9d03a6237577a7bec48ed827f93e4fa87f289f76",
+      "release_asset": "ZipDepthBaseNPU896x512.mpsgraphpackage.zip",
+      "release_asset_bytes": 11410619,
+      "release_asset_sha256": "5f3437b8d5cee76e146c570461a60c97f04d4b05b057b58eb4ddf09f7d205a9d",
+      "coreml_release_asset": "ZipDepthBaseNPU896x512.mlpackage.zip",
+      "coreml_release_asset_bytes": 11413977,
+      "coreml_release_asset_sha256": "dfb36f6ccafeca6c7dab7ae5b090619f348622ffd3946f69997067de47222a62",
+      "coreml_compatibility": {
+        "coremltools_target": "iOS16",
+        "macos_equivalent_minimum": "13.0",
+        "supports_macos_15": true
+      },
+      "mpsgraph_conversion_trials": [
+        {
+          "minimum_macos_target": "27.0.0",
+          "conversion_passed": true,
+          "runtime_tested": true
+        }
+      ]
+    },
+    {
+      "name": "ZipDepthBaseNPU896x512TensorF16",
+      "upstream": "https://github.com/fabiotosi92/ZipDepth",
+      "reviewed_upstream_revision": "91f3fd21e131641f51e8d35736d1958350180e3a",
+      "license": "MIT",
+      "input": {
+        "data_type": "float16",
+        "layout": "NCHW",
+        "shape": [
+          1,
+          3,
+          512,
+          896
+        ],
+        "range": "0...255 RGB"
+      },
+      "output": {
+        "data_type": "float16",
+        "layout": "NCHW",
+        "shape": [
+          1,
+          1,
+          512,
+          896
+        ]
+      },
+      "mess_output_scale": 10.0,
+      "coreml_weight_sha256": "43e6718f6903c54145afbc7a9d03a6237577a7bec48ed827f93e4fa87f289f76",
+      "release_asset": "ZipDepthBaseNPU896x512TensorF16.mpsgraphpackage.zip",
+      "release_asset_bytes": 11410643,
+      "release_asset_sha256": "012d62a47e3aa18f40cdd712819fe6e4816e5eba58a3f4b484bf190eb1ea3cb7",
+      "coreml_release_asset": "ZipDepthBaseNPU896x512TensorF16.mlpackage.zip",
+      "coreml_release_asset_bytes": 11413935,
+      "coreml_release_asset_sha256": "1dd1ca3d365d950eb465a429e604281b81c15ccacabb6706bdb33ad8e5ac286b",
+      "coreml_compatibility": {
+        "coremltools_target": "iOS16",
+        "macos_equivalent_minimum": "13.0",
+        "supports_macos_15": true
+      },
+      "mpsgraph_conversion_trials": [
+        {
+          "minimum_macos_target": "27.0.0",
+          "conversion_passed": true,
+          "runtime_tested": true
+        }
+      ]
+    },
+    {
+      "name": "ZipDepthBaseNPU1536x864",
+      "upstream": "https://github.com/fabiotosi92/ZipDepth",
+      "reviewed_upstream_revision": "91f3fd21e131641f51e8d35736d1958350180e3a",
+      "license": "MIT",
+      "input": {
+        "data_type": "float32",
+        "layout": "NCHW",
+        "shape": [
+          1,
+          3,
+          864,
+          1536
+        ],
+        "range": "0...255 RGB"
+      },
+      "output": {
+        "data_type": "float16",
+        "layout": "NCHW",
+        "shape": [
+          1,
+          1,
+          864,
+          1536
+        ]
+      },
+      "mess_output_scale": 10.0,
+      "coreml_weight_sha256": "43e6718f6903c54145afbc7a9d03a6237577a7bec48ed827f93e4fa87f289f76",
+      "release_asset": "ZipDepthBaseNPU1536x864.mpsgraphpackage.zip",
+      "release_asset_bytes": 11410626,
+      "release_asset_sha256": "192da93da302128bfbf7e6a85b26262ccedf6474574d4e54dc9b7e4695462827",
+      "coreml_release_asset": "ZipDepthBaseNPU1536x864.mlpackage.zip",
+      "coreml_release_asset_bytes": 11414005,
+      "coreml_release_asset_sha256": "111cfb341f4fb44df6bb614a297925f24816f4f7b7bbb264785516e2e34f39d1",
+      "coreml_compatibility": {
+        "coremltools_target": "iOS16",
+        "macos_equivalent_minimum": "13.0",
+        "supports_macos_15": true
+      },
+      "mpsgraph_conversion_trials": [
+        {
+          "minimum_macos_target": "27.0.0",
+          "conversion_passed": true,
+          "runtime_tested": true
+        }
+      ]
+    },
+    {
+      "name": "ZipDepthBaseNPU1536x864TensorF16",
+      "upstream": "https://github.com/fabiotosi92/ZipDepth",
+      "reviewed_upstream_revision": "91f3fd21e131641f51e8d35736d1958350180e3a",
+      "license": "MIT",
+      "input": {
+        "data_type": "float16",
+        "layout": "NCHW",
+        "shape": [
+          1,
+          3,
+          864,
+          1536
+        ],
+        "range": "0...255 RGB"
+      },
+      "output": {
+        "data_type": "float16",
+        "layout": "NCHW",
+        "shape": [
+          1,
+          1,
+          864,
+          1536
+        ]
+      },
+      "mess_output_scale": 10.0,
+      "coreml_weight_sha256": "43e6718f6903c54145afbc7a9d03a6237577a7bec48ed827f93e4fa87f289f76",
+      "release_asset": "ZipDepthBaseNPU1536x864TensorF16.mpsgraphpackage.zip",
+      "release_asset_bytes": 11410649,
+      "release_asset_sha256": "1784e7eeb4147352825ea685d6c0093ffa1e2190c694f144e70a78f0d864c6e9",
+      "coreml_release_asset": "ZipDepthBaseNPU1536x864TensorF16.mlpackage.zip",
+      "coreml_release_asset_bytes": 11413972,
+      "coreml_release_asset_sha256": "a618d4594d9946ddb369f5eaf4f17156a07ae5d56e7bc284d4a3fb1e649d186e",
+      "coreml_compatibility": {
+        "coremltools_target": "iOS16",
+        "macos_equivalent_minimum": "13.0",
+        "supports_macos_15": true
+      },
+      "mpsgraph_conversion_trials": [
+        {
+          "minimum_macos_target": "27.0.0",
+          "conversion_passed": true,
+          "runtime_tested": true
+        }
+      ]
+    },
+    {
+      "name": "ZipDepthBaseNPU1920x1088",
+      "upstream": "https://github.com/fabiotosi92/ZipDepth",
+      "reviewed_upstream_revision": "91f3fd21e131641f51e8d35736d1958350180e3a",
+      "license": "MIT",
+      "input": {
+        "data_type": "float32",
+        "layout": "NCHW",
+        "shape": [
+          1,
+          3,
+          1088,
+          1920
+        ],
+        "range": "0...255 RGB"
+      },
+      "output": {
+        "data_type": "float16",
+        "layout": "NCHW",
+        "shape": [
+          1,
+          1,
+          1088,
+          1920
+        ]
+      },
+      "mess_output_scale": 10.0,
+      "coreml_weight_sha256": "43e6718f6903c54145afbc7a9d03a6237577a7bec48ed827f93e4fa87f289f76",
+      "release_asset": "ZipDepthBaseNPU1920x1088.mpsgraphpackage.zip",
+      "release_asset_bytes": 11410647,
+      "release_asset_sha256": "6239531201bdba6b8909bd0e905d30d517983a96c4bd78757c13102bd184c86a",
+      "coreml_release_asset": "ZipDepthBaseNPU1920x1088.mlpackage.zip",
+      "coreml_release_asset_bytes": 11414022,
+      "coreml_release_asset_sha256": "edb9bf364df084ede79495d39a422e096388f73008b70d9245522e7f26fce189",
+      "coreml_compatibility": {
+        "coremltools_target": "iOS16",
+        "macos_equivalent_minimum": "13.0",
+        "supports_macos_15": true
+      },
+      "mpsgraph_conversion_trials": [
+        {
+          "minimum_macos_target": "27.0.0",
+          "conversion_passed": true,
+          "runtime_tested": true
+        }
+      ]
+    },
+    {
+      "name": "ZipDepthBaseNPU1920x1088TensorF16",
+      "upstream": "https://github.com/fabiotosi92/ZipDepth",
+      "reviewed_upstream_revision": "91f3fd21e131641f51e8d35736d1958350180e3a",
+      "license": "MIT",
+      "input": {
+        "data_type": "float16",
+        "layout": "NCHW",
+        "shape": [
+          1,
+          3,
+          1088,
+          1920
+        ],
+        "range": "0...255 RGB"
+      },
+      "output": {
+        "data_type": "float16",
+        "layout": "NCHW",
+        "shape": [
+          1,
+          1,
+          1088,
+          1920
+        ]
+      },
+      "mess_output_scale": 10.0,
+      "coreml_weight_sha256": "43e6718f6903c54145afbc7a9d03a6237577a7bec48ed827f93e4fa87f289f76",
+      "release_asset": "ZipDepthBaseNPU1920x1088TensorF16.mpsgraphpackage.zip",
+      "release_asset_bytes": 11410673,
+      "release_asset_sha256": "0ef66d9e9f52557f6fca74595e342514da0b778aa9e2bb58848d17018e0a34a7",
+      "coreml_release_asset": "ZipDepthBaseNPU1920x1088TensorF16.mlpackage.zip",
+      "coreml_release_asset_bytes": 11413982,
+      "coreml_release_asset_sha256": "bf79960c102f0d001bcdcce0d61d2a93a07bfb1525b92b0801cd069966929233",
+      "coreml_compatibility": {
+        "coremltools_target": "iOS16",
+        "macos_equivalent_minimum": "13.0",
+        "supports_macos_15": true
+      },
+      "mpsgraph_conversion_trials": [
+        {
+          "minimum_macos_target": "27.0.0",
+          "conversion_passed": true,
+          "runtime_tested": false
+        }
+      ]
     }
   ],
   "compatibility_probe": {
@@ -262,5 +744,6 @@
     "macos_26_package_target": "1.3.3",
     "macos_15_package_target": "1.2.1",
     "failure_exit_status": 134
-  }
+  },
+  "updated_at": "2026-09-28"
 }

@@ -8,14 +8,17 @@ The [full performance comparison](studies/depth-performance-comparison.md)
 collects every checked-in realtime capture and standalone timing result while
 keeping results from different harnesses separate.
 
-The first study compares four fixed-shape Core ML models executed through
-MPSGraph on Apple silicon. Its tagged release provides the Core ML source
-packages and ready-to-load `.mpsgraphpackage` archives for:
+The first study and its follow-up optimization work compare fixed-shape Core ML
+models executed through MPSGraph on Apple silicon. The tagged release provides
+the Core ML source package and ready-to-load `.mpsgraphpackage` archive for each
+MESS-integrated variant:
 
-- Depth Anything V2 Small, 448 x 336;
-- Depth Anything 3 Small, 518 x 518;
-- Depth Anything 3 Small, 392 x 392; and
-- ZipDepth Base NPU, 384 x 384.
+- Depth Anything V2 Small at 448 x 336 with image/FP32 and planar-FP16 graph
+  inputs;
+- Depth Anything 3 Small at 518 x 518 and 392 x 392; and
+- ZipDepth Base NPU at 384 x 384, 512 x 512, 672 x 384, 896 x 512,
+  1536 x 864, and 1920 x 1088, including planar-FP16 variants at 384 x 384,
+  896 x 512, 1536 x 864, and 1920 x 1088.
 
 See [the macOS 27 realtime study](studies/realtime-depth-macos27/findings.md) for
 results and limitations, [the deployment compatibility report](studies/realtime-depth-macos27/compatibility.md)
@@ -118,11 +121,13 @@ This 1920 x 1080 rendered frame uses the 1920 x 1088 fixed model tensor.
 ## Compatibility
 
 The v0.1.0 graph packages were created by Xcode 27.0's `mpsgraphtool`, package
-format 7.0.63, with a macOS 27.0 deployment target. They have only been executed
-on an Apple M1 Max running macOS 27.0. The corresponding `.mlpackage` archives
-are included as the exact Core ML inputs used to create those graph packages.
-All four Core ML packages support macOS 15: DA2 and ZipDepth declare the Core ML
-specification target corresponding to macOS 13, while DA3 declares macOS 15.
+format 7.0.63, with a macOS 27.0 deployment target. Runtime evidence was
+collected on an Apple M1 Max running macOS 27.0; the artifact manifest records
+which individual variants were exercised. The corresponding `.mlpackage`
+archives are included as the exact Core ML inputs used to create those graph
+packages. All fourteen Core ML packages support macOS 15: DA2 and ZipDepth
+declare the Core ML specification target corresponding to macOS 13, while DA3
+declares macOS 15.
 
 ## Repository scope
 

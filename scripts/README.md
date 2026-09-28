@@ -3,13 +3,20 @@
 Each model family owns its Core ML export and MPSGraph conversion entry point:
 
 - `models/depth-anything-v2/build.sh`
+- `models/depth-anything-v2/build_tensor_f16.sh` (experimental graph input)
+- `models/depth-anything-v2/build_sdpa.sh` (rejected attention experiment)
 - `models/depth-anything-3/build_518.sh`
 - `models/depth-anything-3/build_392.sh`
 - `models/zipdepth/build_384.sh`
 - `models/zipdepth/build_512.sh`
 - `models/zipdepth/build_672x384.sh`
 - `models/zipdepth/build_896x512.sh`
+- `models/zipdepth/build_1536x864.sh`
+- `models/zipdepth/build_1920x1088.sh`
 - `models/zipdepth/build_384_tensor_f16.sh` (experimental graph input)
+- `models/zipdepth/build_896x512_tensor_f16.sh` (experimental graph input)
+- `models/zipdepth/build_1536x864_tensor_f16.sh` (experimental graph input)
+- `models/zipdepth/build_1920x1088_tensor_f16.sh` (experimental graph input)
 
 All three use `common/convert_coreml_to_mpsgraph.sh` only for the final conversion
 of one named `.mlpackage`. Source revisions, weights, patches, dependencies,
