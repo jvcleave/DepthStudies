@@ -43,8 +43,8 @@ target macOS 27. The runtime machine remains macOS 27.
 
 | Run | MPSGraph engine | Fixed input | Graph input | Package target | Artifacts | Median model | Median depth source | Depth-source p90 | Median presentation |
 | --- | --- | ---: | --- | --- | --- | ---: | ---: | ---: | ---: |
-| M01 | Depth Anything V2 | 448 x 336 | FP32 | macOS 27 | Pending | — | — | — | — |
-| M02 | Depth Anything V2 | 448 x 336 | FP16 | macOS 27 | Pending | — | — | — | — |
+| M01 | Depth Anything V2 | 448 x 336 | FP32 | macOS 27 | [Raw](captures/DA2_448x336_MPSGRAPH_FP32_CLEAN) / [PNG](../../images/examples/da2-448x336-mpsgraph-fp32-clean.png) | 15.17 ms | 15.35 ms | 15.69 ms | 60.000 fps |
+| M02 | Depth Anything V2 | 448 x 336 | FP16 | macOS 27 | [Raw](captures/DA2_448x336_MPSGRAPH_FP16_CLEAN) / [PNG](../../images/examples/da2-448x336-mpsgraph-fp16-clean.png) | 15.22 ms | 15.38 ms | 15.76 ms | 60.008 fps |
 | M03 | Depth Anything 3 Small | 392 x 392 | FP32 | macOS 27 | Pending | — | — | — | — |
 | M04 | Depth Anything 3 Small | 518 x 518 | FP32 | macOS 27 | Pending | — | — | — | — |
 | M05 | ZipDepth Base NPU | 384 x 384 | FP32 | macOS 27 | [Raw](captures/ZIP_384x384_MPSGRAPH_FP32_CLEAN) / [PNG](../../images/examples/zipdepth-384x384-mpsgraph-fp32-clean.png) | 5.63 ms | 5.78 ms | 6.44 ms | 59.995 fps |
@@ -67,7 +67,9 @@ The controlled application results do not reproduce the earlier isolated
 ZipDepth 384 FP16 gain. At 384 x 384, FP16 increased median complete-path
 latency by `10.2%` versus FP32. At 1920 x 1088, FP16 increased the median by
 `1.3%`; the p90 was effectively tied, while median presentation was lower.
-FP32 is therefore the current preferred graph input for both captured shapes.
+At DA2 448 x 336, FP16 changed median complete-path latency from `15.35 ms` to
+`15.38 ms`, an effectively tied `0.2%` increase. FP32 is therefore the current
+preferred graph input for all three captured FP32/FP16 pairs.
 
 ## Depth-only Core ML validation
 
@@ -78,15 +80,16 @@ policy; the capture does not record the device placement selected by Core ML.
 
 | Route | Duration / samples | Model median / p90 / p99 | Depth-source median / p90 / p99 | Presentation | Example |
 | --- | ---: | ---: | ---: | ---: | --- |
+| [DA2 448 Core ML](captures/DA2_448x336_COREML_CLEAN) | 32.60 s / 33 | 15.93 / 16.32 / 16.61 ms | 16.68 / 17.95 / 21.26 ms | 59.996 fps | ![DA2 448 Core ML clean snapshot](../../images/examples/da2-448x336-coreml-clean.png) |
 | [DA3 392 Core ML](captures/DA3_392x392_COREML_CLEAN) | 23.47 s / 24 | 15.18 / 15.74 / 17.52 ms | 16.43 / 16.86 / 19.00 ms | 60.006 fps | ![DA3 392 Core ML clean snapshot](../../images/examples/da3-392x392-coreml-clean.png) |
 | [ZipDepth 384 Core ML](captures/ZIP_384x384_COREML_CLEAN) | 33.90 s / 34 | 7.44 / 7.62 / 7.70 ms | 8.24 / 8.62 / 11.24 ms | 60.007 fps | ![ZipDepth 384 Core ML clean snapshot](../../images/examples/zipdepth-384x384-coreml-clean.png) |
 | [ZipDepth 512 Core ML](captures/ZIP_512x512_COREML_CLEAN) | 33.85 s / 34 | 9.65 / 10.33 / 10.58 ms | 11.29 / 12.27 / 12.52 ms | 60.003 fps | ![ZipDepth 512 Core ML clean snapshot](../../images/examples/zipdepth-512x512-coreml-clean.png) |
 | [ZipDepth 672 Core ML](captures/ZIP_672x384_COREML_CLEAN) | 32.62 s / 33 | 9.69 / 10.11 / 10.61 ms | 10.80 / 11.59 / 12.26 ms | 59.996 fps | ![ZipDepth 672 Core ML clean snapshot](../../images/examples/zipdepth-672x384-coreml-clean.png) |
 | [ZipDepth 1920 Core ML](captures/ZIP_1920x1088_COREML_CLEAN) | 33.80 s / 34 | 60.68 / 61.07 / 61.41 ms | 61.70 / 61.98 / 62.29 ms | 60.000 fps | ![ZipDepth 1920 Core ML clean snapshot](../../images/examples/zipdepth-1920x1088-coreml-clean.png) |
 
-Against these application-policy Core ML controls, MPSGraph FP32 reduced
-median complete-path latency by `29.9%` at 384 x 384, `30.6%` at 512 x 512,
-and `28.3%` at 1920 x 1088. The 672 x 384 MPSGraph control is still missing;
+Against the Core ML controls, MPSGraph FP32 reduced median complete-path
+latency by `8.0%` for DA2, `29.9%` for ZipDepth 384, `30.6%` for ZipDepth 512,
+and `28.3%` for ZipDepth 1920. The 672 x 384 MPSGraph control is still missing;
 two supplied 672 Core ML captures were duplicates, so only the first was kept.
 
 ## How the realtime capture was measured

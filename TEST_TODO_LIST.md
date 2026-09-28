@@ -131,14 +131,15 @@ same weights and graph shape; only planar FP32 versus FP16 graph input changes.
 
 ### Depth Anything V2 at 448 x 336
 
-- [ ] **A01** — `DEPTH V2 GRAPH`, CLEAN. FP32-input MPSGraph baseline.
-- [ ] **A02** — `DEPTH DA2 F16 GRAPH`, CLEAN. Optimized FP16-input candidate.
-- [ ] **A03** — `DEPTH V2 CORE ML`, CLEAN. Current CPU-plus-GPU application
+- [x] **A01** — `DEPTH V2 GRAPH`, CLEAN. FP32-input MPSGraph baseline.
+- [x] **A02** — `DEPTH DA2 F16 GRAPH`, CLEAN. Optimized FP16-input candidate.
+- [x] **A03** — `DEPTH V2 CORE ML`, CLEAN. Current CPU-plus-GPU application
   baseline.
 
-Decision: retain DA2 FP16 only if complete depth-source latency, presentation
-rate, or delivered cadence improves. Its isolated MPSGraph execution was tied
-with FP32, so the remaining hypothesis is cheaper packing and buffer traffic.
+Decision: FP16 and FP32 were tied in the clean application path at `15.38 ms`
+and `15.35 ms` median complete latency. MPSGraph FP32 was `8.0%` faster than
+Core ML and had tighter tails. Prefer MPSGraph FP32; the FP16 route does not
+provide a measured benefit.
 
 ### ZipDepth at 384 x 384
 
