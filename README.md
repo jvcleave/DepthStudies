@@ -32,6 +32,8 @@ classic decomposed attention as the selected implementation.
 The [DA2 FP16 input study](studies/apple-silicon-depth-optimization/da2-fp16-input-findings.md)
 halves graph-input bytes with tied isolated execution and defines the remaining
 complete MESS comparison.
+The [DA3 compute-unit study](studies/apple-silicon-depth-optimization/da3-compute-unit-findings.md)
+finds CPU plus GPU faster than CPU plus Neural Engine and `all` at 392 x 392.
 
 Use the [realtime test TODO list](TEST_TODO_LIST.md) to batch the remaining MESS
 comparisons without mixing current app options with experiments that still need

@@ -200,14 +200,14 @@ but it does not predict an improvement.
 
 ### DA3 Core ML compute-unit sweep
 
-- [ ] Benchmark the existing 392 x 392 image-input package with fixed
+- [x] Benchmark the existing 392 x 392 image-input package with fixed
   `cpuAndGPU`, `cpuAndNeuralEngine`, and `all` configurations.
-- [ ] Run three alternating comparisons and record median, p90, p99, numerical
+- [x] Run three alternating comparisons and record median, p90, p99, numerical
   error, and host/runtime versions.
-- [ ] Repeat the sweep at 518 x 518 only if a non-GPU route is competitive at
-  392 x 392 or if the 518 quality difference justifies the extra work.
-- [ ] Add an explicit app option only for a route that wins in isolation; do
-  not restore workload-driven compute-unit switching.
+- [x] Evaluate the 518 x 518 gate. It did not advance because the non-GPU
+  routes were 21.9–25.2% slower at 392 x 392 and no separate quality need was
+  identified.
+- [x] Evaluate app integration. Keep CPU plus GPU; add no ANE or `all` option.
 
 The current compute plans estimate 97.66% Neural Engine cost at 392 x 392 and
 97.02% at 518 x 518 under CPU plus Neural Engine. DA3's native SDPA is supported
@@ -215,6 +215,9 @@ by CPU, GPU, and Neural Engine in these packages, so this measurement is more
 plausible than rewriting its attention graph. Placement estimates are not
 runtime evidence; DA2 already demonstrated that high estimated ANE placement
 can still be slower.
+
+See the [DA3 compute-unit findings](studies/apple-silicon-depth-optimization/da3-compute-unit-findings.md)
+and raw run reports.
 
 ### DA3 FP16 graph input
 
