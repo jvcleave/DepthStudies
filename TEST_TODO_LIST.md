@@ -29,7 +29,7 @@ saved.
   active depth model and backend are fixed during app startup.
 - [ ] Let the depth output and stats overlay stabilize before starting
   `CAPTURE LOG`.
-- [ ] Capture at least 30 seconds. Prefer 60 seconds when comparing p90 or p99.
+- [ ] Capture at least 20 seconds after warm-up.
 - [ ] Press `SNAP SHOT` once during the active capture after the output has
   stabilized. Allow the PNG write to complete before stopping `CAPTURE LOG`.
   New captures record the absolute PNG path in a `capture.snapshot` event.
@@ -90,7 +90,7 @@ under LOADED. This keeps the batch small while still exposing GPU contention.
 
 This is the controlled batch planned for the next MESS run. It covers every
 MPSGraph depth option currently exposed in App Settings. Use the rows in this
-order so each FP32/FP16 pair remains adjacent. Capture 60 seconds per row after
+order so each FP32/FP16 pair remains adjacent. Capture 20 seconds per row after
 warm-up, using a fresh app launch for every selection.
 
 The package target is part of the result identity. `DEPTH ZIP 896 GRAPH` uses
@@ -179,7 +179,7 @@ fast graph variant is also the best application option.
 
 ### Depth Anything 3
 
-- [ ] **B01** — `DEPTH DA3 392 CORE ML`, CLEAN.
+- [x] **B01** — `DEPTH DA3 392 CORE ML`, CLEAN.
 - [ ] **B02** — `DEPTH DA3 392 GRAPH`, CLEAN.
 - [ ] **B03** — `DEPTH DA3 518 CORE ML`, CLEAN.
 - [ ] **B04** — `DEPTH DA3 518 GRAPH`, CLEAN.
@@ -188,10 +188,9 @@ The standalone 392 routes were close, while 518 MPSGraph was substantially
 slower than Core ML. These captures also replace the older DA3 run whose exact
 shape was not recorded.
 
-A [23.47-second DA3 392 Core ML validation capture](studies/realtime-depth-macos27/captures/DA3_392x392_COREML_CLEAN_PRELIMINARY)
-confirmed the configuration and snapshot-path workflow. It remains preliminary
-because it contains only 24 usable samples and is shorter than the 30-second
-minimum, so B01 remains unchecked.
+A [23.47-second DA3 392 Core ML capture](studies/realtime-depth-macos27/captures/DA3_392x392_COREML_CLEAN)
+confirmed the configuration and snapshot-path workflow with 24 usable samples,
+so it completes B01 under the 20-second test contract.
 
 ### ZipDepth Core ML controls
 

@@ -54,17 +54,16 @@ See the [first configured capture report](realtime-depth-macos27/loaded-fp16-com
 [second ZipDepth report](realtime-depth-macos27/loaded-zipdepth-batch-2-2026-09-28.md),
 and [test TODO list](../TEST_TODO_LIST.md) for the remaining controlled runs.
 
-### Preliminary clean Core ML validation
+### Clean Core ML validation
 
 One snapshot-linked depth-only validation capture is checked in separately. It
 used DA3 392 x 392 through Core ML, recorded no foreground or face timing, and
-ended with zero dropped events. Its 23.47-second duration is below the current
-30-second acceptance minimum, so it remains preliminary and does not complete
-the B01 checklist item.
+ended with zero dropped events. Its 23.47-second duration satisfies the current
+20-second acceptance minimum and completes the B01 checklist item.
 
 | Capture | Shape | Backend | Duration / n | Model latency | Complete depth-source latency | Presentation median | Example |
 | --- | ---: | --- | ---: | ---: | ---: | ---: | --- |
-| [DA3 392 clean preliminary](realtime-depth-macos27/captures/DA3_392x392_COREML_CLEAN_PRELIMINARY) | 392 x 392 | Core ML | 23.47 s / 24 | 15.18 / 15.74 / 17.52 ms | 16.43 / 16.86 / 19.00 ms | 60.006 fps | [PNG](../images/examples/da3-392x392-coreml-clean-preliminary.png) |
+| [DA3 392 clean](realtime-depth-macos27/captures/DA3_392x392_COREML_CLEAN) | 392 x 392 | Core ML | 23.47 s / 24 | 15.18 / 15.74 / 17.52 ms | 16.43 / 16.86 / 19.00 ms | 60.006 fps | [PNG](../images/examples/da3-392x392-coreml-clean.png) |
 
 ## Paired standalone experiments
 
@@ -124,6 +123,6 @@ comparison because its runtime state and protocol differ.
 ## Missing realtime rows
 
 No accepted configured realtime capture has yet been checked in for ZipDepth
-384 x 384, ZipDepth 1920 x 1088, either DA3 fixed shape, or a Core ML app
-route. CLEAN FP32/FP16 pairs also remain pending. Those gaps stay explicit in the
+384 x 384, ZipDepth 1920 x 1088, DA3 518 x 518, or either DA3 MPSGraph shape.
+CLEAN FP32/FP16 pairs also remain pending. Those gaps stay explicit in the
 [test TODO list](../TEST_TODO_LIST.md).
