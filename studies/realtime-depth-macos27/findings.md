@@ -4,6 +4,9 @@ Recorded 2026-09-25 on an Apple M1 Max running macOS 27.0 with Xcode 27.0
 (build 27A266a). The MESS realtime session targeted 60 fps and used the
 MPSMediaPipe face backend.
 
+See the [full performance comparison](../depth-performance-comparison.md) for
+all 11 checked-in realtime captures and the separate standalone harness tables.
+
 ## Realtime MPSGraph capture results
 
 ZipDepth had the lowest depth cost in the captured MESS sessions. Depth Anything

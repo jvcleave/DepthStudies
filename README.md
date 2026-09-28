@@ -4,6 +4,10 @@ DepthStudies collects reproducible Apple-platform depth-model conversions,
 runtime artifacts, and measurements used while evaluating depth engines for
 MESS.
 
+The [full performance comparison](studies/depth-performance-comparison.md)
+collects every checked-in realtime capture and standalone timing result while
+keeping results from different harnesses separate.
+
 The first study compares four fixed-shape Core ML models executed through
 MPSGraph on Apple silicon. Its tagged release provides the Core ML source
 packages and ready-to-load `.mpsgraphpackage` archives for:

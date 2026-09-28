@@ -4,6 +4,9 @@
 Two loaded capture batches are logged as directional observations; the
 controlled checklist remains open.
 
+See the [full performance comparison](studies/depth-performance-comparison.md)
+for every realtime and standalone result recorded so far.
+
 Use this checklist to compare the depth options already exposed by MESS and to
 track promising experiments that still need implementation. Check off a run
 only after its exported diagnostic capture and visual reference have been
