@@ -24,6 +24,20 @@ source patch and exporter, DA3 pins the tagged conversion fork and its numerical
 validator, and ZipDepth carries its pinned exporter. They share only the final
 one-package `mpsgraphtool` helper.
 
+## Example frames
+
+These MESS frames show depth-driven contour treatments using two of the study
+models. They are qualitative examples rather than controlled raw-depth
+comparisons; the surrounding effect chain contributes to the rendered image.
+
+### Depth Anything V2 Small — Core ML
+
+![MESS frame using Depth Anything V2 Small through Core ML](images/examples/da2-coreml.png)
+
+### ZipDepth Base NPU
+
+![MESS frame using ZipDepth Base NPU](images/examples/zipdepth.png)
+
 ## Compatibility
 
 The v0.1.0 graph packages were created by Xcode 27.0's `mpsgraphtool`, package
