@@ -19,6 +19,10 @@ for the macOS 27 boundary and reproduced diagnostics, [the artifact manifest](ma
 for exact contracts and provenance, and [the model build workflows](scripts/README.md)
 for end-to-end export and conversion commands.
 
+The [Apple silicon depth optimization plan](studies/apple-silicon-depth-optimization-plan.md)
+turns the initial results into staged Core ML residency, ZipDepth, and DA2
+experiments with explicit quality and performance gates.
+
 Each model family has its own entry point. Depth Anything V2 carries its fixed
 source patch and exporter, DA3 pins the tagged conversion fork and its numerical
 validator, and ZipDepth carries its pinned exporter. They share only the final
