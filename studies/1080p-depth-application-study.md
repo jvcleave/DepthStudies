@@ -2,505 +2,473 @@
 
 **Updated:** 2026-09-28 · **Application:** MESS
 
-**Measured platform:** Apple M1 Max, macOS 27.0, Xcode 27.0
+**Test computer:** Apple M1 Max, macOS 27.0, Xcode 27.0
 
-The study asks: **given a 1920 x 1080 image, which depth model, input size,
-runtime, and optimization should an application use when depth, face detection,
-and foreground extraction all contribute to the final image?**
+The question is: **given a 1080p image, which depth model and size work best
+when an application also detects faces and extracts the foreground?**
 
-This document consolidates the existing measurements, conversion experiments,
-visual references, deployment constraints, and next steps. All original reports
-remain available in the [source index](#source-index). The latest controlled
-application results take precedence over earlier isolated results and older
-reports that still describe the CLEAN comparisons as pending.
+This document brings together the models tested, changes tried, speed results,
+example images, recommended sizes, and remaining quality checks. The original
+reports are listed in the [source index](#source-index) and remain in place.
+The completed application tests take priority over earlier reports that still
+say those tests are pending.
 
-Measurements are rounded to whole numbers for readability. Percent changes
-and route selections use the original values, so rounded times can look tied.
-Exact measurements remain in the raw captures and source reports.
+Measurements are rounded to whole numbers. Comparisons and recommendations
+use the original values, so some rounded times look tied. Exact measurements
+remain in the saved logs and source reports.
 
-The current evidence supports a performance shortlist:
+Model names use the input width: **ZipDepth 672** means the version that takes
+a 672-pixel-wide image. Full dimensions appear in the [model reference table](#models-tested).
+A [glossary at the bottom](#glossary) explains the abbreviations and technical
+terms that remain.
 
-- **Lowest depth cost:** ZipDepth 384 x 384, MPSGraph FP32, at **6 ms**
-  median complete depth-source latency in the CLEAN application run.
-- **General 1080p candidates:** ZipDepth 672 x 384 with MPSGraph FP32 and
-  ZipDepth 896 x 512. Core ML wins the CLEAN 896 comparison; the loaded graph
-  observations make MPSGraph worth a controlled comparison under contention.
-- **High-resolution candidate:** ZipDepth 1536 x 864 with MPSGraph FP16, at
-  **15 ms** CLEAN median with substantially better tails than FP32. Its
-  initial loaded capture presented at **51 fps**, so it needs a separate
-  decision for the combined workload.
-- **Alternative model families:** DA2 448 x 336 and DA3 392 x 392 remain
-  useful visual-quality controls, with CLEAN graph medians around **15–16 ms**.
+The current speed results suggest:
 
-These are measured performance choices and proposed evaluation sizes.
-**A quality winner for the combined application has not yet been established.**
-Conversion checks measure numerical agreement, rendered examples show useful
-effects, and loaded captures expose contention. Matched raw-depth, face,
-foreground, and temporal-quality scores are still needed to select a final
-application default.
+- **Lowest processing time:** ZipDepth 384 with MPSGraph and 32-bit input,
+  taking about **6 ms** in the depth-only application test.
+- **First choices to compare for 1080p:** ZipDepth 672 and ZipDepth 896.
+  Core ML was fastest for ZipDepth 896 in the depth-only test; MPSGraph is also
+  worth testing when faces and foreground extraction run alongside depth.
+- **A larger-image option:** ZipDepth 1536 with MPSGraph and 16-bit input,
+  taking about **15 ms** in the depth-only test. With face and foreground work
+  active, its initial test displayed about **51 fps**.
+- **Other model families to compare:** Depth Anything V2 448 and Depth Anything
+  3 392, taking about **15–16 ms** with MPSGraph in the depth-only tests.
+
+**We have speed results, but no confirmed winner for combined image quality.**
+The conversion checks show that the converted models keep the expected depth
+output. Example images show how the effects look. We still need comparisons
+using the same frames to judge depth, foreground edges, faces, and stability
+when the scene moves.
 
 ## Reading guide
 
-1. [The 1080p workflow](#the-1080p-workflow)
-2. [Candidates used](#candidates-used)
-3. [Optimizations applied and evaluated](#optimizations-applied-and-evaluated)
-4. [How performance was measured](#how-performance-was-measured)
-5. [Results and top performers](#results-and-top-performers)
-6. [Quality evidence and the combined application](#quality-evidence-and-the-combined-application)
-7. [Recommended sizes and routes](#recommended-sizes-and-routes)
-8. [Remaining work](#remaining-work)
-9. [Deployment and reproduction](#deployment-and-reproduction)
-10. [Suggested documentation organization](#suggested-documentation-organization)
+1. [How the application uses a 1080p image](#how-the-application-uses-a-1080p-image)
+2. [Models tested](#models-tested)
+3. [Changes we tried](#changes-we-tried)
+4. [How to read the measurements](#how-to-read-the-measurements)
+5. [Results](#results)
+6. [What we know about quality](#what-we-know-about-quality)
+7. [Recommended models and sizes](#recommended-models-and-sizes)
+8. [Next steps](#next-steps)
+9. [Supported macOS versions and repeating the tests](#supported-macos-versions-and-repeating-the-tests)
+10. [Suggested document structure](#suggested-document-structure)
 
-The appendices retain the complete realtime matrix, loaded observations,
-standalone comparisons, and compute-plan estimates so the narrative can be
-read without losing the detailed results.
+The detailed tables are at the end:
+[all depth-only results](#appendix-a-all-depth-only-results),
+[all combined-workload results](#appendix-b-all-combined-workload-results),
+[model-only tests](#appendix-c-model-only-tests),
+[expected hardware use](#appendix-d-expected-hardware-use), and
+[output checks](#appendix-e-output-checks).
 
-Jump to [all CLEAN results](#appendix-a-complete-clean-application-matrix),
-[all loaded observations](#appendix-b-complete-loaded-application-observations),
-[standalone comparisons](#appendix-c-standalone-timing-comparisons), or
-[placement estimates](#appendix-d-core-ml-placement-context).
+## How the application uses a 1080p image
 
-## The 1080p workflow
-
-1080p describes the source and final presentation. It does **not** require
-running the depth model at 1920 x 1080. The application prepares a smaller,
-fixed-size input, infers depth, and maps the result back into the source image's
-coordinates for effects and compositing.
+The source and final image are 1920 x 1080. Each depth model runs at its own
+chosen input size. The application resizes the image, estimates depth, and
+fits that result back onto the source image for effects and compositing.
 
 ```mermaid
 flowchart LR
-    A["1920 x 1080 source image"] --> B["Resize and prepare RGB input"]
-    B --> C["Fixed-shape depth model"]
-    C --> D["Map depth to source coordinates"]
-    A --> E["Face detection and landmarks"]
-    A --> F["Foreground extraction"]
-    D --> G["Depth, face, and foreground effects"]
+    A["1080p source image"] --> B["Resize image for depth model"]
+    B --> C["Estimate depth"]
+    C --> D["Fit depth back onto source image"]
+    A --> E["Detect faces and facial points"]
+    A --> F["Extract foreground"]
+    D --> G["Combine results in the effect"]
     E --> G
     F --> G
-    G --> H["1920 x 1080 rendered output"]
-    H --> I["Review quality and realtime behavior"]
+    G --> H["1080p final image"]
+    H --> I["Review image quality and speed"]
 ```
 
-This is the intended evaluation workflow. The repository contains depth
-conversion recipes and MESS measurements; the application implementation lives
-in MESS. Existing captures validate 1920 x 1080 **rendered snapshots** and the
-exact depth tensor dimensions. They do not independently record the original
-source resolution or every resize/crop/pad transform. A fully reproducible
-1080p-input claim therefore also needs source dimensions and geometry recorded
-with the next batch.
+The process has three depth steps:
 
-The depth path has three important stages:
+1. **Prepare the image.** Resize it to the model's input dimensions. Core ML
+   takes an image. MPSGraph takes separate red, green, and blue values, stored
+   as 16-bit or 32-bit numbers. The converted model handles the required
+   scaling and color adjustments.
+2. **Estimate depth.** Run the model through Core ML or MPSGraph. Its depth
+   image has the same dimensions as the model input and uses 16-bit values.
+3. **Apply the effect.** Fit the depth image back onto the 1080p image and use
+   it alongside detected faces and the foreground mask. All three results
+   need to line up in position, orientation, and time.
 
-1. **Prepare the input.** Resize the RGB image to the model's fixed dimensions.
-   Core ML's existing application route uses image input. MPSGraph uses planar
-   RGB in NCHW layout, with FP32 or FP16 values in the 0...255 range. Pixel
-   scaling and normalization follow the exported model contract.
-2. **Infer depth.** Run the fixed-shape package through Core ML or MPSGraph.
-   The released graph contracts produce FP16 depth at the model dimensions.
-3. **Use depth at 1080p.** Map the depth result into the rendered image and
-   combine it with the face and foreground results. Consistent orientation,
-   crop/padding, timestamps, and coordinates belong in the quality review.
+The saved example images are confirmed to be 1080p. The logs record the depth
+model's dimensions, but do not independently record the original source size
+or exactly how it was stretched, cropped, or padded. Those details should be
+recorded in the next test batch. The application code lives in MESS; this
+repository stores model conversion steps and test results.
 
-Record the actual image transform when comparing square, 4:3, and wide models.
-Model dimensions alone do not establish whether the application stretches,
-crops, or pads a 16:9 source. A larger tensor also does not establish better
-depth quality without matched output review.
+Square, 4:3, and wide inputs can treat a 16:9 source differently. Record the
+actual resize method and compare images from the same frame. More input
+pixels may help detail, but that benefit still needs to be demonstrated.
 
-ZipDepth dimensions must be multiples of 32. The application's `ZIP 1080`
-option therefore uses **1920 x 1088**, rather than a literal 1920 x 1080 tensor.
-1536 x 864 is an exact 16:9 alternative with 37% fewer model pixels.
-The eight extra rows at 1088 are a small part of the cost; the larger activation
-and compute workload is the main resolution tradeoff.
+ZipDepth requires each input dimension to be a multiple of 32. The app's
+`ZIP 1080` setting therefore selects **ZipDepth 1920**, whose exact input is
+1920 x 1088. ZipDepth 1536 uses an exact 16:9 input and has 37% fewer pixels.
+The cost of the largest input mostly comes from processing more pixels; the
+eight extra rows account for only a small part of that increase.
 
-## Candidates used
+## Models tested
 
-All shapes below are width x height. Sizes within a family use the same pinned
-checkpoint; they are fixed-shape exports rather than separately trained models.
-The measured CLEAN matrix covers 14 MPSGraph variants and nine Core ML controls.
+Each family uses the same saved model weights across its sizes. These are
+size-specific copies of the same trained model. There were 14 MPSGraph
+versions and nine Core ML versions in the completed depth-only tests.
 
-| Family | Fixed inputs evaluated | Core ML application input | MPSGraph inputs evaluated | Implementation retained |
-| --- | --- | --- | --- | --- |
-| Depth Anything V2 Small (DA2) | 448 x 336 | RGB image | FP32 and FP16 | Fixed-shape realtime export, optimized depth head, classic decomposed attention |
-| Depth Anything 3 Small (DA3) | 392 x 392; 518 x 518 | RGB image | FP32 | Learned camera token, alternating attention, twelve native scaled-dot-product-attention operations |
-| ZipDepth Base NPU | 384 x 384; 512 x 512; 672 x 384; 896 x 512; 1536 x 864; 1920 x 1088 | RGB image | FP32 at all six sizes; FP16 at 384, 896, 1536, and 1920 | Balanced global context, fused convolution/batch normalization, unfold-free upsampling |
-
-The size sweep covers different budgets and geometries:
-
-| Family / shape | Model pixels | Share of 1920 x 1080 pixels | Geometry |
-| --- | ---: | ---: | --- |
-| DA2 448 x 336 | 150,528 | 7% | 4:3 |
-| DA3 392 x 392 | 153,664 | 7% | Square |
-| DA3 518 x 518 | 268,324 | 13% | Square |
-| ZipDepth 384 x 384 | 147,456 | 7% | Square |
-| ZipDepth 512 x 512 | 262,144 | 13% | Square |
-| ZipDepth 672 x 384 | 258,048 | 12% | Near 16:9, rounded to multiples of 32 |
-| ZipDepth 896 x 512 | 458,752 | 22% | Near 16:9, rounded to multiples of 32 |
-| ZipDepth 1536 x 864 | 1,327,104 | 64% | Exact 16:9 |
-| ZipDepth 1920 x 1088 | 2,088,960 | 101% | Full-width 1080-class tensor |
-
-512 x 512 and 672 x 384 have nearly equal pixel counts, making them useful
-geometry controls. Neither currently has an FP16-input graph variant.
-
-DA2 and DA3 Core ML use CPU plus GPU in MESS. ZipDepth Core ML retains an
-application policy that can choose CPU plus Neural Engine when depth is
-prioritized and CPU plus GPU when competing foreground/person analysis changes
-that priority. Its application captures measure that policy; they do not
-establish fixed accelerator placement.
-
-Exact tensor contracts, output scales, archive hashes, source revisions, and
-licenses are recorded in the [artifact manifest](../manifests/mpsgraph-depth-models-macos27-v0.1.0.json)
-and [third-party notices](../THIRD_PARTY_NOTICES.md). The manifest also records
-family-specific MESS output scales. Raw values across these families should
-not be treated as a shared calibrated distance scale.
-
-## Optimizations applied and evaluated
-
-The existing exports already use fixed shapes and FP16 model computation.
-DA2 has its fixed realtime source patch and optimized depth head. ZipDepth
-fuses convolution/batch normalization and uses its NPU unfold-free upsampling
-path. DA3's conversion preserves the camera token and attention behavior.
-These are baseline implementation choices; the study has not isolated a
-separate speedup for every one of them.
-
-The follow-up experiments changed one factor at a time:
-
-| Change | What it tests | Measured outcome | Current disposition |
+| Family | Versions tested | Input types tested with MPSGraph | What the conversion keeps |
 | --- | --- | --- | --- |
-| Core ML versus MPSGraph | Application integration and runtime choice at the same fixed shape | MPSGraph wins most CLEAN comparisons; Core ML wins ZipDepth 896 and the DA3 518 median | Select per shape and workload |
-| Fixed input-size sweep | Compute cost and available spatial detail | ZipDepth spans 6 to 44 ms for each shape's best CLEAN graph route | Retain a small evaluation shortlist; confirm quality separately |
-| Planar FP16 graph input | Direct FP16 Metal packing, half the input-buffer bytes, removal of the leading cast | Benefit varies by family and shape | Prefer FP16 for ZipDepth 896 graphs and 1536 graphs; retain FP32 for DA2, ZipDepth 384, and ZipDepth 1920 |
-| DA2 native scaled dot-product attention (SDPA) | Replace 24 matmul and 12 softmax operations with twelve native attention operations | Numerical gates passed; Core ML was 2–3% slower and MPSGraph 4–5% slower in paired trials | Rejected before app integration; retain classic attention |
-| DA3 Core ML compute units | CPU + GPU versus CPU + Neural Engine versus all | At 392, CPU + Neural Engine and all were 25% and 23% slower by aggregate median | Keep CPU + GPU; larger-shape compute-unit sweep did not advance |
-| Core ML compute-plan audit | Test presumed CPU fallback before rewriting a network | High estimated Neural Engine placement in all audited families | Placement is context; measured runtime decides |
-| ZipDepth global-context ablations | Remove StripPooling and/or GlobalContext | Audit did not identify the presumed fallback boundary | Deferred; no quality or speed result exists for these variants |
+| Depth Anything V2 Small | 448 | 16-bit and 32-bit | Its existing attention calculation and changes that reduce depth-output processing work |
+| Depth Anything 3 Small | 392 and 518 | 32-bit | Its original camera token and attention calculation |
+| ZipDepth Base NPU | 384, 512, 672, 896, 1536, and 1920 | 32-bit at all sizes; 16-bit at 384, 896, 1536, and 1920 | Its existing scene-context processing and simplified image-enlargement steps |
 
-FP16 **input** is independent of the model's already-FP16 computation and
-output. It halves the planar input buffer, not the whole application working
-set. Packing, memory use, and individual preprocessing stages have not been
-measured separately in the checked-in realtime captures.
+All Core ML application versions take an image. Full input dimensions are
+listed here so the shorter names remain unambiguous.
 
-| FP16-input candidate | FP32 input bytes | FP16 input bytes | CLEAN complete-depth median: FP32 → FP16 | Application interpretation |
+| Model name | Input dimensions, width x height | Input pixels | Share of 1080p pixels | Image shape |
+| --- | ---: | ---: | ---: | --- |
+| Depth Anything V2 448 | 448 x 336 | 150,528 | 7% | 4:3 |
+| Depth Anything 3 392 | 392 x 392 | 153,664 | 7% | Square |
+| Depth Anything 3 518 | 518 x 518 | 268,324 | 13% | Square |
+| ZipDepth 384 | 384 x 384 | 147,456 | 7% | Square |
+| ZipDepth 512 | 512 x 512 | 262,144 | 13% | Square |
+| ZipDepth 672 | 672 x 384 | 258,048 | 12% | Close to 16:9, adjusted to multiples of 32 |
+| ZipDepth 896 | 896 x 512 | 458,752 | 22% | Close to 16:9, adjusted to multiples of 32 |
+| ZipDepth 1536 | 1536 x 864 | 1,327,104 | 64% | Exact 16:9 |
+| ZipDepth 1920 | 1920 x 1088 | 2,088,960 | 101% | Full-width 1080p option |
+
+ZipDepth 512 and ZipDepth 672 have almost the same pixel count, making them
+useful for comparing square and wide inputs. Neither currently has a 16-bit
+MPSGraph input version.
+
+In MESS, Depth Anything V2 and Depth Anything 3 use CPU plus GPU for Core ML.
+ZipDepth Core ML can use CPU plus Neural Engine when depth has priority, or
+CPU plus GPU when foreground/person processing changes that priority. Its
+application results include this automatic choice. The logs do not identify
+which hardware Core ML actually used for each operation.
+
+The [model manifest](../manifests/mpsgraph-depth-models-macos27-v0.1.0.json)
+records exact input/output settings, versions, file checksums, and output
+scaling. [Third-party notices](../THIRD_PARTY_NOTICES.md) record model sources
+and licenses. Each family has its own depth scale; the raw numbers should not
+be compared as though they all measure distance in the same units.
+
+## Changes we tried
+
+The starting models already have fixed input sizes and use 16-bit calculations.
+Depth Anything V2 reduces work in the part that produces the depth image.
+ZipDepth combines some calculation steps and simplifies how it enlarges an
+image. Depth Anything 3 keeps its original camera token and attention behavior.
+We have not measured the individual speed benefit of every starting change.
+
+The follow-up tests examined:
+
+| Change | Reason for testing it | Result | Recommendation |
+| --- | --- | --- | --- |
+| Core ML versus MPSGraph | Find the faster way to run each model in the application | MPSGraph wins most depth-only comparisons; Core ML wins ZipDepth 896 and the typical time for Depth Anything 3 518 | Choose by model size and application workload |
+| Smaller or larger inputs | Compare processing time and available detail | The best ZipDepth MPSGraph times range from 6 to 44 ms | Compare a few sizes and check whether extra pixels improve the effect |
+| 16-bit MPSGraph input | Halve input-buffer size and remove an input-number conversion | Helps some models and sizes, but not all | Use it for ZipDepth 896 and 1536 when choosing MPSGraph; keep 32-bit for Depth Anything V2, ZipDepth 384, and ZipDepth 1920 |
+| A different attention calculation in Depth Anything V2 | Test a built-in attention operation, SDPA | Same output in the tested comparisons, but 2–3% slower through Core ML and 4–5% slower through MPSGraph | Keep the original calculation; the candidate was not added to the app |
+| Different hardware choices for Depth Anything 3 | Compare CPU + GPU, CPU + Neural Engine, and all available devices | At size 392, Neural Engine and all-device options were 25% and 23% slower | Keep CPU + GPU; testing size 518 did not advance |
+| Core ML's hardware-use estimates | Check the assumption that some work was unexpectedly falling back to CPU | Estimates already assign most work to Neural Engine | Use measured times to make the decision |
+| Removing ZipDepth scene-context parts | Test whether those parts cause the expected hardware problem | The hardware-use estimates did not show that problem | Put this experiment on hold; no speed or quality result exists for it |
+
+Changing the input to 16-bit halves the **input buffer**, rather than the
+whole app's memory use. Model calculations and depth output already use
+16-bit numbers. The application logs do not separately measure input packing,
+other preparation steps, or total memory use.
+
+| Model | 32-bit input bytes | 16-bit input bytes | Typical full depth time: 32-bit → 16-bit | Result |
 | --- | ---: | ---: | --- | --- |
-| DA2 448 x 336 | 1,806,336 | 903,168 | 15 → 15 ms | Tied; keep FP32 |
-| ZipDepth 384 x 384 | 1,769,472 | 884,736 | 6 → 6 ms | FP16 10% slower; keep FP32 |
-| ZipDepth 896 x 512 | 5,505,024 | 2,752,512 | 13 → 12 ms | FP16 9% faster within MPSGraph; Core ML still wins CLEAN at 11 ms |
-| ZipDepth 1536 x 864 | 15,925,248 | 7,962,624 | 15 → 15 ms | Median close; p90 improves 21 → 16 ms and p99 25 → 17 ms |
-| ZipDepth 1920 x 1088 | 25,067,520 | 12,533,760 | 44 → 45 ms | Median close; keep FP32 based on median and presentation |
+| Depth Anything V2 448 | 1,806,336 | 903,168 | 15 → 15 ms | Tied; keep 32-bit |
+| ZipDepth 384 | 1,769,472 | 884,736 | 6 → 6 ms | 16-bit is 10% slower before rounding; keep 32-bit |
+| ZipDepth 896 | 5,505,024 | 2,752,512 | 13 → 12 ms | 16-bit is 9% faster with MPSGraph; Core ML still wins the depth-only test at 11 ms |
+| ZipDepth 1536 | 15,925,248 | 7,962,624 | 15 → 15 ms | Similar typical times; slower readings improve from 21 to 16 ms, and the slowest from 25 to 17 ms |
+| ZipDepth 1920 | 25,067,520 | 12,533,760 | 44 → 45 ms | Similar typical times; keep 32-bit based on time and display rate |
 
-The 384 FP16 isolated graph trials initially showed a 28–36% median
-reduction. The controlled application comparison reversed that result.
-At 896, 1536, and 1920, isolated graph execution was effectively tied, while
-some complete application paths benefited. This is why the full depth path is
-the primary performance measure.
+The model-only tests initially showed a 28–36% improvement for ZipDepth 384
+with 16-bit input. The application test reversed that result. The larger
+model-only tests were effectively tied, while some application tests improved.
+Measuring the full depth process is therefore necessary.
 
-The 896 graph comparison also differs in serialization target: the CLEAN FP32
-graph targets macOS 15, while FP16 targets macOS 27. A separate target-parity
-probe produced identical output and similar execution on macOS 27, but the
-CLEAN pair should not be described as differing exclusively in input precision.
+The ZipDepth 896 comparison also uses different package targets: its 32-bit
+MPSGraph package targets macOS 15, while its 16-bit package targets macOS 27.
+A separate check found identical output and similar speed on macOS 27, but
+input precision is not the only difference between those two app packages.
 
-## How performance was measured
+## How to read the measurements
 
-The main application evidence was recorded on 2026-09-28 on an M1 Max running
-macOS 27.0 with Xcode 27.0 build 27A266a. Earlier captures date to 2026-09-25.
-The compatibility/audit records identify the host as Mac Studio `Mac13,1` and
-macOS build 26A428. Individual loaded captures do not embed full host or app
-build identities.
+The main application tests ran on 2026-09-28 on an M1 Max, macOS 27.0, and
+Xcode 27.0 build 27A266a. Earlier runs date to 2026-09-25. The hardware reports
+identify the computer as Mac Studio `Mac13,1` and the macOS build as 26A428.
+Individual combined-workload logs do not include the full computer or app
+version details.
 
-| Evidence | Workload and protocol | What it supports |
+There are three kinds of timing tests:
+
+| Test | What ran | What it tells us |
 | --- | --- | --- |
-| CLEAN application matrix | Release build; same prerecorded source and segment, output size, 60 fps target, and one identical depth-consuming effect; foreground/person and face work disabled; fresh launch and warm-up; at least 20 seconds captured; one in-capture snapshot | Controlled application comparison of depth routes and sizes |
-| Configured LOADED observations | Foreground and face work active; exact depth model, input, shape, MPSGraph backend, MPSMediaPipe face backend, and 60 fps target recorded | Initial contention evidence; source segment, full effect/analysis configuration, host/build identity, matched frames, and memory are missing |
-| Standalone paired MPSGraph | Synchronous GPU completion, `.level0`, 20 warmups, alternating order, three trials | Graph execution and conversion agreement; excludes texture resize, Metal packing, depth unpacking, and output upscale |
-| Standalone paired Core ML | Documented synchronous prediction protocol; Python/PIL or tensor bridge where applicable | Compare routes within the same experiment; bridge and residency state affect absolute timings |
-| Core ML compute plan | Anticipated devices and normalized estimated cost; no predictions | Placement hypotheses, rather than latency or a trace of actual execution |
+| Depth-only application test | Release build; same saved video segment, 1080p output, 60 fps target, and one identical depth effect; faces and foreground work off; fresh launch, warm-up, at least 20 seconds logged, and one saved image | Compares the full depth process under controlled conditions |
+| Combined-workload application test | Depth, foreground, and face processing active; model, input size/type, MPSGraph, MPSMediaPipe face processing, and 60 fps target recorded | Shows initial behavior under load; exact source/effect settings, comparison images, memory, and full computer/app versions are missing |
+| Model-only test | Same input and alternating test order; wait for each result before timing the next call | Compares model execution; preparation, data transfer, and test-program overhead differ from the app |
 
-For MPSGraph, **model time** spans encoding through the completion callback and
-can include queued preprocessing dependencies. **Complete depth-source time**
-spans the app worker's request start through its completed depth result and
-final GPU command-buffer completion. It is the complete depth path, not the
-combined face/foreground/render pipeline's end-to-end latency.
+**Model time** measures running the model. MPSGraph's measurement can also
+include waiting for earlier image preparation. **Full depth time** measures
+from the app starting a depth request until the result is ready, including
+finishing its GPU work. It does not measure the entire face, foreground, and
+rendering process together.
 
-The diagnostic stream samples the latest timing values approximately once per
-second. Depth metrics are stored as `1000 / operation_ms`; the summarizer
-converts each sample back to milliseconds, excludes `elapsed_s < 1`, then
-computes median, p90, and p99. Model and complete-depth values are sampled
-independently, so their aggregate medians can occasionally appear out of order.
+The log records the latest times about once per second. The first reading
+before one second is excluded. Model time and full depth time are recorded
+independently, so their middle values can sometimes appear in an unexpected
+order. The saved depth fields use `1000 / operation_ms`; the summary script
+converts them back to milliseconds before calculating the reported values.
 
-**Presentation fps and depth update cadence are different measurements.**
-Presentation is the sampled rolling 60-frame render rate. The stream does not
-count delivered depth completions or superseded requests. A 60 fps rendered
-output therefore does not prove 60 fresh depth maps per second. The current
-p99 values also come from tens of one-second samples, rather than a full
-distribution of every completed request.
+- **Typical time** is the median: half the recorded readings are at or below it.
+- **Slower readings (p90)** show the time that 90% of readings are at or below.
+- **Slowest readings (p99)** show the time that 99% of readings are at or below.
 
-## Results and top performers
+These percentages describe the sampled readings, rather than every individual
+depth request. Each app run has only tens of readings, so p99 is an estimate
+based on a small sample.
 
-### Controlled depth-only results
+**The display rate and depth update rate are different.** A display running at
+60 fps can reuse an older depth result. The logs do not yet count how many new
+depth results arrive or how many requests are replaced by newer ones. They
+therefore cannot establish a fresh-depth frame rate or explain scheduling
+behavior. The display rate is a rolling 60-frame average sampled once per second.
 
-All 23 accepted CLEAN captures ended normally with zero dropped diagnostic
-events, recorded no foreground or face timing, and linked a valid 1920 x 1080
-snapshot. The fastest route below means the lowest **median complete
-depth-source latency within a tested family and shape**. Close differences and
-tail behavior are included in the interpretation.
+Core ML's hardware-use reports are another kind of evidence. They predict
+which hardware is preferred, with estimated shares of work. They do not run the
+model or measure its time. Appendix D keeps those estimates separate.
 
-| Family / size | Best CLEAN median route | Median | p90 | p99 | Interpretation |
+## Results
+
+### Depth-only application results
+
+All 23 accepted tests finished normally, lost no log events, recorded no face
+or foreground timings, and saved a 1080p image. Each row below selects the
+method with the lowest typical **full depth time** for that model and size.
+
+| Model | Fastest tested method | Typical | Slower (p90) | Slowest (p99) | Finding |
 | --- | --- | ---: | ---: | ---: | --- |
-| DA2 448 x 336 | MPSGraph FP32 | 15 ms | 16 ms | 16 ms | 8% lower median than Core ML; FP16 tied |
-| DA3 392 x 392 | MPSGraph FP32 | 16 ms | 16 ms | 18 ms | 6% lower median than Core ML |
-| DA3 518 x 518 | Core ML image | 49 ms | 55 ms | 61 ms | 2% lower median than MPSGraph; graph has better tails |
-| ZipDepth 384 x 384 | MPSGraph FP32 | 6 ms | 6 ms | 7 ms | Fastest depth route in the CLEAN matrix |
-| ZipDepth 512 x 512 | MPSGraph FP32 | 8 ms | 8 ms | 9 ms | 31% lower median than Core ML |
-| ZipDepth 672 x 384 | MPSGraph FP32 | 8 ms | 9 ms | 9 ms | Wide, low-cost candidate; 24% lower median than Core ML |
-| ZipDepth 896 x 512 | Core ML image | 11 ms | 12 ms | 12 ms | Core ML wins CLEAN; FP16 is the preferred tested graph input |
-| ZipDepth 1536 x 864 | MPSGraph FP16 | 15 ms | 16 ms | 17 ms | 57% lower median than Core ML and tighter tails than FP32 |
-| ZipDepth 1920 x 1088 | MPSGraph FP32 | 44 ms | 47 ms | 53 ms | 28% lower median than Core ML; expensive for frequent fresh depth |
+| Depth Anything V2 448 | MPSGraph, 32-bit input | 15 ms | 16 ms | 16 ms | 8% faster than Core ML; 16-bit input tied |
+| Depth Anything 3 392 | MPSGraph, 32-bit input | 16 ms | 16 ms | 18 ms | 6% faster than Core ML |
+| Depth Anything 3 518 | Core ML | 49 ms | 55 ms | 61 ms | 2% lower typical time than MPSGraph; MPSGraph has better slower readings |
+| ZipDepth 384 | MPSGraph, 32-bit input | 6 ms | 6 ms | 7 ms | Lowest depth processing time in the table |
+| ZipDepth 512 | MPSGraph, 32-bit input | 8 ms | 8 ms | 9 ms | 31% faster than Core ML |
+| ZipDepth 672 | MPSGraph, 32-bit input | 8 ms | 9 ms | 9 ms | Wide input; 24% faster than Core ML |
+| ZipDepth 896 | Core ML | 11 ms | 12 ms | 12 ms | Core ML wins; 16-bit input is the better MPSGraph option |
+| ZipDepth 1536 | MPSGraph, 16-bit input | 15 ms | 16 ms | 17 ms | 57% faster than Core ML; more consistent than 32-bit input |
+| ZipDepth 1920 | MPSGraph, 32-bit input | 44 ms | 47 ms | 53 ms | 28% faster than Core ML, but costly for frequent depth updates |
 
-DA2's Core ML route is the older-system alternative at 17 / 18 / 21 ms.
-At DA3 518, MPSGraph measured 50 / 53 / 54 ms: a slightly higher
-median with better tail latency. At ZipDepth 896, MPSGraph FP16 measured
-12 / 13 / 13 ms and FP32 measured 13 / 13 / 17 ms.
+Depth Anything V2 448 with Core ML provides the older-macOS alternative at
+17 / 18 / 21 ms. Depth Anything 3 518 with MPSGraph takes 50 / 53 / 54 ms:
+slightly slower typically, but better on its slower readings. For ZipDepth 896,
+MPSGraph takes 12 / 13 / 13 ms with 16-bit input and 13 / 13 / 17 ms with
+32-bit input. These sets are typical / p90 / p99 times.
 
-At a 60 fps target, one presentation interval is about 17 ms. Several
-depth-only medians fit within that interval, but concurrent work, scheduling,
-tail latency, and depth age still determine the usable combined application
-result. The CLEAN matrix alone cannot establish that result.
+At 60 fps, there are about 17 ms between displayed frames. Several depth-only
+times fit that interval. Face/foreground work, occasional slow results, and
+reusing older depth results still affect the full application.
 
-### Depth, face, and foreground running together
+### Depth, faces, and foreground together
 
-Eight configured loaded captures provide initial combined-workload evidence.
-All use MPSGraph for depth and record active foreground and face timing.
+Eight later runs record the model and input settings. All use MPSGraph for
+depth and have active face and foreground processing.
 
-| Model / shape | Loaded complete-depth median: FP32 / FP16 | Presentation median: FP32 / FP16 | Observation |
+| Model | Typical full depth time: 32-bit / 16-bit | Display rate: 32-bit / 16-bit | Finding |
 | --- | --- | --- | --- |
-| DA2 448 x 336 | 30 / 30 ms | 58 / 58 fps | Input precision tied |
-| ZipDepth 512 x 512 | 7 / not tested ms | 60 / not tested fps | Low-cost observation; foreground median 22 ms |
-| ZipDepth 672 x 384 | 6 / not tested ms | 60 / not tested fps | Low-cost observation; foreground median 18 ms |
-| ZipDepth 896 x 512 | 9 / 8 ms | 60 / 60 fps | FP16 median 6% lower; p90/p99 worse |
-| ZipDepth 1536 x 864 | 29 / 28 ms | 51 / 51 fps | FP16 median 4% lower; p90/p99 effectively tied |
+| Depth Anything V2 448 | 30 / 30 ms | 58 / 58 fps | Input types tied |
+| ZipDepth 512 | 7 / not tested ms | 60 / not tested fps | Foreground processing takes about 22 ms |
+| ZipDepth 672 | 6 / not tested ms | 60 / not tested fps | Foreground processing takes about 18 ms |
+| ZipDepth 896 | 9 / 8 ms | 60 / 60 fps | 16-bit typical time is 6% lower; slower readings are worse |
+| ZipDepth 1536 | 29 / 28 ms | 51 / 51 fps | 16-bit typical time is 4% lower; slower readings are similar |
 
-Loaded latency sometimes appears lower than CLEAN latency for the same model.
-These batches do not freeze or record the same full workload and source, so
-that does not establish that adding face and foreground work improves depth
-execution. Likewise, 512 and 672 cannot be ranked by their loaded times alone:
-their competing foreground workload differed materially.
+Some combined-workload times are lower than the depth-only times. The batches
+lack the same recorded source and complete settings, so we cannot conclude
+that adding face and foreground work makes depth faster. We also cannot rank
+ZipDepth 512 against ZipDepth 672 from these runs: their foreground workload
+differed.
 
-The 896 FP16 loaded p90 rose from 9 to 10 ms and p99 from 9 to
-13 ms. Its median improvement merits a controlled repeat. There is no
-configured loaded Core ML 896 control, so the best backend for the combined
-896 workload remains unresolved.
+For ZipDepth 896 with 16-bit input, p90 increased from 9 to 10 ms and p99 from
+9 to 13 ms. Repeat the comparison under the same conditions. There is no
+matching combined-workload Core ML result for ZipDepth 896, so its best method
+under that workload remains undecided.
 
-The 1536 result makes the application question concrete: a model with an
-approximately 15 ms CLEAN path can take approximately 28 ms under the recorded
-loaded conditions while presentation falls near 51 fps. The study needs to
-judge this alongside quality and delivered depth cadence before adopting it.
+ZipDepth 1536 shows why the combined test matters. A model taking about 15 ms
+on its own took about 28 ms under the recorded workload, while display rate
+fell near 51 fps. Any added image detail needs to justify that cost.
 
-The three older loaded captures are retained in Appendix B. Their selected
-shapes and input types were not recorded, so they are historical context for
-the model families rather than evidence for a recommended size.
+Three older runs remain in Appendix B. Their model families were named by the
+user, but their exact input sizes and types were not logged. They provide
+background rather than a size recommendation.
 
-## Quality evidence and the combined application
+## What we know about quality
 
-Quality has three distinct meanings in this study:
+There are three separate questions:
 
-| Quality question | Existing evidence | Current conclusion |
+| Question | Evidence so far | Conclusion |
 | --- | --- | --- |
-| Does the conversion or optimization preserve its source output? | Deterministic fixtures, paired depth comparisons, error thresholds, and compute-unit output checks | Tested candidates passed their documented numerical gates, including some rejected for speed |
-| Does the depth produce a useful rendered effect? | MESS contour examples and 23 CLEAN snapshots at 1920 x 1080 | Useful qualitative references; no scored cross-model quality ranking |
-| Does the combined application preserve faces, foreground edges, depth structure, and temporal stability? | Active workload timings in loaded captures | Combined quality is unscored; matched layers and sequences are needed |
+| Does a conversion or change keep the model's expected output? | Repeatable input patterns and comparisons of the resulting depth values | Tested candidates passed their output checks, including some rejected for speed |
+| Does the depth make a useful effect? | Contour examples and 23 depth-only images at 1080p | Useful examples, but no scored quality ranking between models |
+| Do depth, faces, and foreground work well together, including motion? | Processing times from runs with all three active | Quality still needs review using the same frames and video segments |
 
-Passing a conversion gate is evidence of fidelity to the chosen model, not
-accuracy against real-world depth or a ranking between model families.
-Foreground and face timing also do not measure extraction or detection quality.
-No checked-in benchmark provides ground-truth depth accuracy, foreground IoU,
-face detection accuracy, or a temporal stability score for the combined runs.
+Matching a model's output does not prove that its depth is accurate in the real
+scene. Face and foreground processing times do not measure detection or mask
+quality. There are no recorded scores against known depth, reference masks,
+annotated faces, or expected stability during motion. The detailed output
+checks are preserved in [Appendix E](#appendix-e-output-checks).
 
-### Numerical fidelity already checked
+### Example images
 
-The FP16-input Core ML checks used gradient, checker, and seeded-random inputs
-through CPU plus GPU. The graph checks used a fixed planar input. The table
-reports the worst fixture value for each Core ML comparison and the recorded
-graph comparison. Absolute errors are expressed in millionths of a depth
-output unit; normalized RMSE is expressed in parts per million (ppm). These
-units retain small differences while keeping the displayed values whole.
+These depth-only tests use the same depth effect. They show the rendered
+result, rather than the depth map or a completed face/foreground/depth
+comparison. All 23 images are embedded in Appendix A. Earlier free-form
+examples remain in the README and source reports.
 
-| Candidate | Core ML maximum absolute error (millionths) / maximum normalized RMSE (ppm) | Graph maximum absolute error (millionths) / normalized RMSE (ppm) | Gate |
-| --- | --- | --- | --- |
-| DA2 FP16 input 448 x 336 | 5,859 / 706 | 5,859 / 601 | Passed: max error ≤ 20,000 millionths and normalized RMSE ≤ 2,000 ppm |
-| ZipDepth FP16 input 384 x 384 | 290 / 1,662 | 244 / 840 | Passed: max error ≤ 500 millionths and normalized RMSE ≤ 2,000 ppm |
-| ZipDepth FP16 input 896 x 512 | 397 / 921 | 305 / 767 | Passed: same ZipDepth thresholds |
-| ZipDepth FP16 input 1536 x 864 | 259 / 516 | 366 / 681 | Passed: same ZipDepth thresholds |
-| ZipDepth FP16 input 1920 x 1088 | 305 / 576 | 397 / 682 | Passed: same ZipDepth thresholds |
-
-DA2 native SDPA preserved exact FP16 output in the recorded Core ML and graph
-comparisons. Its pre-conversion PyTorch maximum error was about 5 millionths
-and normalized RMSE was below 1 ppm. The rebuilt DA2 image-input control also
-produced exact output on all three fixtures.
-
-DA3's 392 compute-unit experiment passed a cosine disagreement ≤ 1,000 ppm
-and mean absolute error ≤ 10,000 millionths gate. Cosine disagreement is one
-minus cosine similarity. Relative to CPU plus GPU, CPU plus Neural Engine
-produced disagreement of 5 ppm, MAE of 9,573 millionths, and maximum error of
-63,477 millionths; `all` produced disagreement of 1 ppm, MAE of 3,832
-millionths, and maximum error of 24,414 millionths.
-
-The old camera-token-disabled DA3 conversion is excluded: it removed learned
-camera-token and alternating global-attention behavior and reached only about
-93% Pearson correlation with the official path on the recorded sample. The
-camera-token-preserving package is the retained baseline.
-
-### Rendered references
-
-These snapshots come from the controlled CLEAN runs and show the same
-depth-consuming treatment. They support visual inspection of the selected
-routes. They are rendered effects, rather than raw-depth maps or completed
-face/foreground/depth comparisons. All 23 snapshots are embedded in Appendix A;
-the original free-form examples remain in the README and source reports.
-
-| Route | Controlled 1920 x 1080 rendered reference |
+| Model and method | 1080p image from the depth-only test |
 | --- | --- |
-| ZipDepth 384 x 384, MPSGraph FP32 | ![CLEAN rendered reference for ZipDepth 384 x 384 MPSGraph FP32](../images/examples/zipdepth-384x384-mpsgraph-fp32-clean.png) |
-| ZipDepth 672 x 384, MPSGraph FP32 | ![CLEAN rendered reference for ZipDepth 672 x 384 MPSGraph FP32](../images/examples/zipdepth-672x384-mpsgraph-fp32-clean.png) |
-| ZipDepth 896 x 512, Core ML | ![CLEAN rendered reference for ZipDepth 896 x 512 Core ML](../images/examples/zipdepth-896x512-coreml-clean.png) |
-| ZipDepth 1536 x 864, MPSGraph FP16 | ![CLEAN rendered reference for ZipDepth 1536 x 864 MPSGraph FP16](../images/examples/zipdepth-1536x864-mpsgraph-fp16-clean.png) |
-| DA2 448 x 336, MPSGraph FP32 | ![CLEAN rendered reference for DA2 448 x 336 MPSGraph FP32](../images/examples/da2-448x336-mpsgraph-fp32-clean.png) |
-| DA3 392 x 392, MPSGraph FP32 | ![CLEAN rendered reference for DA3 392 x 392 MPSGraph FP32](../images/examples/da3-392x392-mpsgraph-fp32-clean.png) |
+| ZipDepth 384, MPSGraph FP32 | ![Depth-only image for ZipDepth 384 MPSGraph FP32](../images/examples/zipdepth-384x384-mpsgraph-fp32-clean.png) |
+| ZipDepth 672, MPSGraph FP32 | ![Depth-only image for ZipDepth 672 MPSGraph FP32](../images/examples/zipdepth-672x384-mpsgraph-fp32-clean.png) |
+| ZipDepth 896, Core ML | ![Depth-only image for ZipDepth 896 Core ML](../images/examples/zipdepth-896x512-coreml-clean.png) |
+| ZipDepth 1536, MPSGraph FP16 | ![Depth-only image for ZipDepth 1536 MPSGraph FP16](../images/examples/zipdepth-1536x864-mpsgraph-fp16-clean.png) |
+| Depth Anything V2 448, MPSGraph FP32 | ![Depth-only image for Depth Anything V2 448 MPSGraph FP32](../images/examples/da2-448x336-mpsgraph-fp32-clean.png) |
+| Depth Anything 3 392, MPSGraph FP32 | ![Depth-only image for Depth Anything 3 392 MPSGraph FP32](../images/examples/da3-392x392-mpsgraph-fp32-clean.png) |
 
-### Proposed quality review for the next batch
+### Quality review for the next tests
 
-Use the same 1080p source frames and fixed rendered settings for each finalist.
-Include close faces, multiple people, hair and hands, thin edges, occlusion,
-low contrast, and motion. Save the source frame, raw depth visualization,
-foreground mask, face boxes/landmarks, final composite, and a short matched
-sequence. Normalize raw-depth displays consistently and document any
-model-specific output scaling or effect calibration.
+Use the same 1080p frames and effect settings for every finalist. Include close
+faces, multiple people, hair, hands, thin edges, overlapping subjects, low
+contrast, and movement. Save the source image, depth map, foreground mask,
+face boxes and facial points, final image, and a short comparison video.
+Display depth maps consistently and record any adjustment to the model's
+output scale or effect settings.
 
-| Review dimension | What to examine | How to record it |
+| Area | What to check | What to save |
 | --- | --- | --- |
-| Scene depth structure | Foreground/background ordering, faces and bodies, separation of overlapping objects | Annotated matched depth maps; if reference depth exists, add a declared accuracy metric and alignment policy |
-| Foreground edges | Hair, hands, thin structures, mask holes, halos, and disagreement between mask and depth | Matched crops; mask IoU/boundary measures only where reference masks exist |
-| Faces | Missed faces, box/landmark alignment, and depth behavior around face effects | Face count and annotated overlays on the same frames; compare with reference annotations where available |
-| Temporal stability | Depth flicker, mask chatter, face jitter, and lag between layers | Matched sequences, layer timestamps, visible regression notes, and depth age once instrumented |
-| Final rendered effect | Contour readability, subject separation, edge bleed, and consistency at 1080p | Review final composites at full resolution with the same preset |
+| Depth | Correct near/far ordering and separation of overlapping subjects | Matching depth maps with notes; add an accuracy score if known depth is available |
+| Foreground edges | Hair, hands, thin objects, missing mask areas, halos, and disagreement with depth | Enlarged matching crops; use mask overlap (IoU) and edge scores if reference masks exist |
+| Faces | Missed faces, misplaced boxes or facial points, and the effect around faces | Face counts and marked images of the same frames; compare with annotations if available |
+| Motion | Depth flicker, changing masks, shaky facial points, and delays between results | Matching videos, result times, and notes about visible problems |
+| Final effect | Clear contours, subject separation, edge bleed, and consistent appearance at 1080p | Full-resolution final images using the same settings |
 
-For an initial visual pass, record each dimension as **pass**, **minor issue**,
-or **fail**, with a frame/time reference and a short reason. This is a proposed
-rubric; no scores have been assigned. Keep performance measurements alongside
-quality notes so the selected size earns its extra cost in the actual effect.
+Mark each area **pass**, **minor issue**, or **fail**, with a frame/time and a
+reason. This is a proposed review method; no scores have been assigned. Keep
+these notes beside the speed results so any extra processing cost has a clear
+visual benefit.
 
-## Recommended sizes and routes
+## Recommended models and sizes
 
-These recommendations select a manageable evaluation set from the recorded
-results. They do not change a MESS default or claim unmeasured visual superiority.
+These choices narrow the next comparisons. They do not change a MESS default
+or claim that an unreviewed image is better.
 
-| Application need | Recommended candidate | Why it advances | What remains before final selection |
+| Need | Candidate | Why compare it | What remains |
 | --- | --- | --- | --- |
-| Minimum depth cost | ZipDepth 384 x 384, MPSGraph FP32 | Lowest CLEAN median, 6 ms; FP16 regressed | Confirm that the smaller square tensor preserves the required subject and edge detail; no configured loaded 384 result |
-| Low-cost wide input for 1080p | ZipDepth 672 x 384, MPSGraph FP32 | 8 ms CLEAN median; initial loaded presentation near 60 fps | Matched quality review and controlled loaded comparison |
-| More model pixels while retaining a modest CLEAN budget | ZipDepth 896 x 512, Core ML as the CLEAN baseline; MPSGraph FP16 as the loaded challenger | Core ML wins CLEAN at 11 ms; FP16 is the better tested graph route and held 60 fps in an initial loaded run | Controlled Core ML versus graph comparison with identical face/foreground workload; repeat graph tails |
-| Higher-resolution depth for effects that justify it | ZipDepth 1536 x 864, MPSGraph FP16 | Exact 16:9; 15 ms CLEAN median with better tails than FP32 | Demonstrate added visual value and acceptable loaded behavior; initial loaded presentation is near 51 fps |
-| Full-width 1080-class experiment | ZipDepth 1920 x 1088, MPSGraph FP32 | Best median at this shape, 44 ms | Retain as an optional resolution reference; no measured quality advantage justifies the cost as a general default |
-| Alternative model behavior | DA2 448 x 336, MPSGraph FP32; DA3 392 x 392, MPSGraph FP32 | Smallest tested variants of these families, around 15–16 ms CLEAN | Compare visual behavior against ZipDepth on the same scenes; configured DA3 loaded result is missing |
-| Older macOS app target | Existing image-input Core ML routes | All released source packages support a macOS 15 app target | Validate on the oldest claimed runtime; current timing evidence comes from macOS 27 |
+| Lowest processing time | ZipDepth 384, MPSGraph with 32-bit input | Fastest depth-only result at 6 ms | Check subject/edge detail and test with faces and foreground active |
+| Wide input at low cost | ZipDepth 672, MPSGraph with 32-bit input | 8 ms depth-only time; initial combined run near 60 fps | Compare image quality and repeat with controlled face/foreground settings |
+| More input detail at modest cost | ZipDepth 896, Core ML plus MPSGraph with 16-bit input | Core ML wins depth-only at 11 ms; the MPSGraph option held 60 fps in an initial combined run | Compare both methods under identical load and repeat the slower-time readings |
+| Larger depth image | ZipDepth 1536, MPSGraph with 16-bit input | Exact 16:9; 15 ms depth-only time and more consistent than 32-bit input | Show an image-quality benefit and decide whether roughly 51 fps under load is acceptable |
+| Full-width reference | ZipDepth 1920, MPSGraph with 32-bit input | Best result at that size, 44 ms | Keep as an optional comparison until its visual benefit justifies the cost |
+| Other model behavior | Depth Anything V2 448 and Depth Anything 3 392, MPSGraph with 32-bit input | Around 15–16 ms depth-only time | Compare against ZipDepth on the same scenes; a recorded-size combined run for Depth Anything 3 is missing |
+| Older macOS support | Existing Core ML image-input versions | All released models support a macOS 15 app target | Test the oldest claimed macOS version; current timings come from macOS 27 |
 
-Start the general 1080p evaluation with **672 x 384 and 896 x 512**. Keep
-384 x 384 as the speed control and 1536 x 864 as the high-resolution challenger.
-512 x 512 remains useful if square input fits the actual transform or its
-matched output is preferable; the recorded timing does not establish a quality
-benefit over 672 x 384. Include DA2 and DA3 392 when comparing model behavior,
-rather than expanding every runtime/precision combination again.
+Start with **ZipDepth 672 and ZipDepth 896**. Keep ZipDepth 384 as the fast
+reference and ZipDepth 1536 as the larger-image option. ZipDepth 512 is useful
+if square input suits the image preparation or produces a preferable result;
+its current timing does not establish a quality benefit over ZipDepth 672.
+Include the two Depth Anything families when comparing different depth behavior.
 
-DA3 518 and ZipDepth 1920 are optional high-cost controls. Their CLEAN medians
-exceed a 17 ms interval by a large margin even when presentation stays near
-60 fps. That cost needs a demonstrated visual benefit or an application policy
-that accepts less frequent depth updates.
+Depth Anything 3 518 and ZipDepth 1920 cost much more than a 17 ms frame
+interval, even when the display stays near 60 fps. Their visual benefit needs
+to justify less frequent fresh depth results.
 
-## Remaining work
+## Next steps
 
-The CLEAN matrix is complete. The next useful milestone is a **controlled
-combined application comparison with matched quality evidence**.
+The controlled depth-only tests are complete. The next milestone is a
+**controlled comparison with faces and foreground active, using matching
+images and videos for quality review**.
 
-1. **Freeze the batch.** Record the M1 Max/other host, macOS and Xcode builds,
-   MESS and bundle commits, model checksums, original source resolution,
-   prerecorded segment, transforms, output size, target fps, effect preset,
-   foreground/person settings, face backend, and warm-up policy. The existing
-   checklist specifies MESS commit `b4628f1243` and bundle commit `095b1d5`, or
-   a later revision retaining the capture metadata and lower-target 896 graph.
-2. **Measure finalists under the same load.** Compare the 672 graph candidate,
-   896 Core ML and FP16 graph routes, and 1536 FP16 with its FP32 control.
-   Add 384, DA2 FP32, or DA3 392 if the matched visual review makes them finalists.
-   Relaunch for every route, stabilize, capture at least 20 seconds using the
-   current contract, and repeat close or surprising pairs in reverse order.
-3. **Save the quality layers and sequence.** Use the proposed rubric, retain
-   one in-capture rendered snapshot, and record a visual-regression decision.
-   The existing loaded captures lack matched visual references and complete
-   source/effect identity, so they do not complete this milestone.
-4. **Collect the missing application metrics.** Record working-set memory
-   separately. Add delivered-depth completion counts, request/superseded
-   counts, and depth age before making delivered-cadence or scheduling claims.
-   Stage timings for resize/pack/graph/unpack/upscale would clarify where FP16
-   helps. CPU/GPU use and combined render latency would complete the workload
-   picture.
-5. **Make a recorded decision.** Classify each finalist as `adopt`,
-   `retain as optional`, or `reject`, based on quality, complete-depth latency,
-   tails, presentation, delivered cadence when available, and memory.
+1. **Record the settings.** Save the computer, macOS/Xcode versions, MESS and
+   bundle versions, model checksums, source size and video segment, resize
+   method, output size, target fps, effect, face/foreground settings, and
+   warm-up process. The current checklist specifies MESS commit `b4628f1243`
+   and bundle commit `095b1d5`, or a later version with the same logging and
+   macOS-15 ZipDepth 896 support.
+2. **Compare the finalists under the same load.** Test ZipDepth 672 with
+   MPSGraph, ZipDepth 896 with Core ML and 16-bit MPSGraph input, and ZipDepth
+   1536 with both input types. Include the other references if image review
+   makes them finalists. Relaunch the app for each method, let it settle,
+   log at least 20 seconds, and repeat close or surprising pairs in reverse
+   order.
+3. **Save the images and video.** Keep a rendered image during each log and
+   the separate depth, face, and foreground results. Record visible problems.
+   Existing combined runs lack matching images and complete source/effect
+   settings, so they do not complete this step.
+4. **Measure the missing information.** Record app memory use. Add counts of
+   completed depth results and requests replaced by newer ones, plus the age
+   of the depth used for each effect. Separately timing image resizing, input
+   preparation, the model, and fitting the output back to 1080p would help
+   explain where 16-bit input saves time. Record CPU/GPU use and the time for
+   the complete rendered result.
+5. **Choose and document the result.** Mark each finalist `adopt`,
+   `retain as optional`, or `reject`, based on images, depth times, occasional
+   slow results, display rate, fresh-depth rate when available, and memory.
 
-Independent model experiments remain secondary to that application question:
+Other experiments can wait until they answer a remaining application question:
 
-| Experiment | State / next gate |
+| Experiment | Status |
 | --- | --- |
-| DA3 392 planar-FP16 graph input | Not exported or measured; validate in isolation before adding an app variant; try 518 only after a smaller-shape success |
-| DA2 FP16 Core ML with CPU + Neural Engine | Tensor-input validator needs a compute-unit option and paired measurements; no tensor-input Core ML app route currently exists |
-| ZipDepth balanced/light/none global-context ablations | Deferred unless runtime profiling identifies a material block cost or a quality study justifies a structural change |
-| DA3 448 x 448 intermediate input | Unbuilt; consider only if matched 392/518 quality reveals a useful gap |
-| Older-target Depth Anything graphs | Unimplemented alternative normalization lowering; validate numerics and performance before claiming compatibility |
+| Depth Anything 3 392 with 16-bit MPSGraph input | Not built or measured; check output and speed before adding it to the app; try 518 only if 392 succeeds |
+| Depth Anything V2 with 16-bit Core ML input and Neural Engine | The test program needs a hardware-choice option; no matching app version exists |
+| Removing ZipDepth scene-context parts | On hold until measured hardware behavior or a quality question justifies changing the model |
+| Depth Anything 3 448 | Not built; consider it if image comparisons show a useful gap between 392 and 518 |
+| Depth Anything MPSGraph on older macOS | A different conversion of its normalization step has not been implemented or tested |
 
-Do not repeat DA2 native SDPA or the rejected DA3 compute-unit routes without
-a material runtime change or a new question. Retraining, weight compression
-without profiling evidence, and a new realtime scheduler are outside the
-current study. The [operational checklist](../TEST_TODO_LIST.md) retains the
-exact app labels and test items.
+Repeat the rejected attention and hardware-choice tests only after a relevant
+Core ML or MPSGraph update or a new question. Retraining, compressing weights
+without a measured need, and redesigning the request scheduler are outside this study.
+The [test checklist](../TEST_TODO_LIST.md) keeps the exact app labels and tasks.
 
-## Deployment and reproduction
+## Supported macOS versions and repeating the tests
 
-### Compatibility
+### macOS support
 
-Model declarations, graph serialization targets, and tested runtimes are
-separate facts. All current timing evidence was collected on the documented
-M1 Max environments, predominantly macOS 27; older model floors are declarations.
+A model's declared minimum macOS version, its converted package target, and
+the versions actually tested are separate. Most timings here come from
+macOS 27 on the M1 Max. A declared older target still needs testing there.
 
-| Artifact | Declared minimum / target | Evidence |
+| Model file | Declared minimum or target | What was checked |
 | --- | --- | --- |
-| Released DA2 and ZipDepth Core ML sources | macOS 13 model floor; usable by a macOS 15 app target | Export uses the iOS 16/macOS 13 Core ML specification; older-runtime validation remains separate |
-| Released DA3 Core ML sources | macOS 15 | Export uses the iOS 18/macOS 15 specification |
-| Released Depth Anything MPSGraph packages | macOS 27 | Conversion passed at 27; tested 26 and 15 targets failed |
-| Standard released ZipDepth MPSGraph packages | macOS 27 study target | A release configuration choice; lower-target conversion succeeded for probed 384 and 896 packages |
-| Alternate ZipDepth 896 FP32 graph used in the CLEAN sweep | macOS 15 serialization target | Loaded and output-validated on macOS 27; execution on macOS 15 remains untested |
+| Depth Anything V2 and ZipDepth Core ML | macOS 13 model minimum; usable in a macOS 15 app | Uses the iOS 16/macOS 13 model format; older-system tests remain separate |
+| Depth Anything 3 Core ML | macOS 15 | Uses the iOS 18/macOS 15 model format |
+| Released Depth Anything MPSGraph | macOS 27 | Conversion works for 27; tested targets 26 and 15 fail |
+| Standard released ZipDepth MPSGraph | macOS 27 study target | This is a release choice; tested 384 and 896 conversions also work for older targets |
+| Alternate ZipDepth 896 MPSGraph with 32-bit input | macOS 15 target | Loads and gives the expected output on macOS 27; has not run on macOS 15 |
 
-Xcode 27.0's `mpsgraphtool` and package format 7.0.63 are the tested conversion
-toolchain. Depth Anything's generated `mps.instance_norm` has explicit gamma,
-beta, mean, and variance operands requiring graph-package target 1.3.8. The
-tool selects target 1.3.3 for macOS 26 and 1.2.1 for macOS 15, causing downgrade
-failure. This restriction belongs to those graph artifacts, independently of
-the Core ML packages and of Debug/Release configuration.
+The tested converter is Xcode 27.0's `mpsgraphtool`, using package format
+7.0.63. The Depth Anything conversion creates a normalization operation,
+`mps.instance_norm`, with settings that require package target 1.3.8.
+The converter chooses 1.3.3 for macOS 26 and 1.2.1 for macOS 15, which cannot
+store that form of the operation. This affects those MPSGraph files, rather
+than their Core ML equivalents. Debug or Release mode does not change the
+required package target.
 
-The target-15 ZipDepth 896 graph produced bit-identical output to target 27 in
-the paired probe on macOS 27. Its graph medians were 6 versus 6 ms over
-30 alternating measured iterations after five warmups. That small probe is
-compatibility evidence, rather than a performance ranking. The
-[raw target comparison](realtime-depth-macos27/compatibility/zipdepth-896x512-macos15-vs-macos27.json)
-and [compatibility report](realtime-depth-macos27/compatibility.md) preserve the
-full diagnostics and tested matrix.
+The macOS-15 ZipDepth 896 package produced exactly the same output as the
+macOS-27 package when checked on macOS 27. Both took about 6 ms in a small
+model-only test with 30 alternating calls after five warm-up calls. This was
+an output/compatibility check, rather than a speed ranking. See the
+[raw comparison](realtime-depth-macos27/compatibility/zipdepth-896x512-macos15-vs-macos27.json)
+and [macOS compatibility report](realtime-depth-macos27/compatibility.md).
 
-### Reproducing models and measurements
+### Repeat the builds and tests
 
-The repository stores conversion recipes, raw captures, numerical reports,
-hashes, and licenses. Large model archives live in releases. The fourteen
-released variants have paired Core ML and macOS-27 MPSGraph archives, plus the
-separate macOS-15 ZipDepth 896 graph. MESS builds its embedded graph resources
-from its own Core ML source packages.
+The repository stores conversion instructions, saved logs, output checks,
+file checksums, and licenses. Large model files live in releases. Each of the
+fourteen released versions has Core ML and macOS-27 MPSGraph archives, plus
+the separate macOS-15 ZipDepth 896 package. MESS creates its embedded MPSGraph
+files from its own Core ML models.
 
-Run model-specific entry points from the repository root, for example:
+Run model-specific build scripts from the repository root, for example:
 
 ```sh
 scripts/models/depth-anything-v2/build.sh
@@ -510,251 +478,355 @@ scripts/models/zipdepth/build_896x512.sh
 scripts/models/zipdepth/build_1536x864_tensor_f16.sh
 ```
 
-The scripts pin source/checkpoint revisions and checksums, export contracts,
-Python dependencies, and graph targets. They share only the final
-one-package conversion helper and refuse to overwrite existing model outputs.
-Generated files default to the ignored `build/` directory. See the
-[build workflow index](../scripts/README.md) and family READMEs for the other
-sizes, experimental exporters, and validator commands.
+The scripts use fixed source and weight versions, verify file checksums, and
+record model settings, required Python packages, and macOS targets. They share
+the final conversion helper and refuse to replace existing model outputs.
+Generated files go in the ignored `build/` directory. See the
+[build instructions](../scripts/README.md) and each model's instructions for
+other sizes and output-check commands.
 
-Summarize a saved realtime capture without running the application:
+Summarize a saved application run without starting MESS:
 
 ```sh
 python3 scripts/summarize_capture.py \
   studies/realtime-depth-macos27/captures/ZIP_1536x864_MPSGRAPH_FP16_CLEAN
 ```
 
-The checked-in [MPSGraph comparison tool](../scripts/tools/mpsgraph-depth-compare/README.md)
-reproduces graph-only paired output/timing checks, and the
-[Core ML compute-plan tool](../scripts/tools/coreml-compute-plan/README.md)
-reproduces placement estimates. The
-[DA3 family workflow](../scripts/models/depth-anything-3/README.md) provides the
-fixed-compute-unit benchmark command. Original experiment pages link individual
-run JSON, fixtures, package identities, and per-run protocol details.
+The [MPSGraph comparison tool](../scripts/tools/mpsgraph-depth-compare/README.md)
+checks output and model-only speed. The
+[Core ML hardware-report tool](../scripts/tools/coreml-compute-plan/README.md)
+repeats the hardware-use estimates. The
+[Depth Anything 3 build instructions](../scripts/models/depth-anything-3/README.md)
+include its fixed-hardware test command. Individual experiment reports link
+the original JSON results, test inputs, package versions, and test procedures.
 
-DA2 Small and DA3 Small retain Apache-2.0 terms; ZipDepth Base NPU retains MIT
-terms. See [third-party notices](../THIRD_PARTY_NOTICES.md) and the included
-license files.
+Depth Anything V2 Small and Depth Anything 3 Small retain Apache-2.0 terms;
+ZipDepth Base NPU retains MIT terms. See the
+[third-party notices](../THIRD_PARTY_NOTICES.md) and included licenses.
 
-## Suggested documentation organization
+## Suggested document structure
 
-Organize the repository around the application question, with this study as
-the primary reading path and the following supporting roles:
+Keep one main study that tells the application story, supported by:
 
-| Document / area | Proposed role |
+| Document or folder | Role |
 | --- | --- |
-| `README.md` | Short repository introduction, link to this study, artifact/build entry points, and a few visual examples |
-| This document | Comprehensive workflow, candidates, optimization decisions, performance and quality evidence, recommended sizes, and appendices |
-| `TEST_TODO_LIST.md` | Operational checklist and exact app settings; update completed work here without duplicating the full narrative |
-| `scripts/` family READMEs | Reproducible build and validation commands |
-| `manifests/`, capture directories, experiment JSON, compute-plan reports | Machine-readable evidence and artifact provenance |
-| Existing findings, optimization plan, and compatibility/release notes | Preserved source reports and historical context during consolidation review |
+| `README.md` | Short introduction, link to this study, build/model links, and a few images |
+| This study | Workflow, models, changes, results, quality review, recommendations, and detailed tables |
+| `TEST_TODO_LIST.md` | Steps for running tests and exact app settings |
+| Model instructions under `scripts/` | Build and output-check commands |
+| `manifests/` and saved test folders | Exact model details and original evidence |
+| Original findings and plans | Preserved experiment history during review |
 
-Some original experiment summaries still say the CLEAN application comparison
-is pending; some initial plans also list structural ablations ahead of the
-audit's later deferral. This consolidation resolves those statuses using the
-completed 2026-09-28 matrix and later decisions. The original reports remain
-unchanged so their history can still be reviewed.
-
-After reviewing coverage, the old narrative reports could be retained as
-dated experiment history or replaced by short pointers. Keep raw evidence,
-build instructions, licensing, and release-specific records. **No documents
-have been removed or moved as part of this consolidation.**
+Some earlier reports still say the depth-only tests are pending or put model
+changes ahead of a later decision to hold them. This study uses the completed
+2026-09-28 tests and later decisions. The original reports remain unchanged.
+After checking coverage, they could stay as dated history or become short
+links to this study. Keep the original data, build steps, licenses, and release
+records. **No documents have been removed or moved.**
 
 ## Source index
 
-| Existing source | Material consolidated here |
+| Source | Material used here |
 | --- | --- |
-| [Full performance comparison](depth-performance-comparison.md) | Every realtime capture, CLEAN winners, paired standalone aggregates, historical medians |
-| [macOS 27 realtime findings](realtime-depth-macos27/findings.md) | Capture timing definitions, controlled protocol, original captures, visual references, early backend comparisons |
-| [First loaded FP16 report](realtime-depth-macos27/loaded-fp16-comparison-2026-09-28.md) | DA2 and ZipDepth 1536 loaded pairs, face/foreground context, metadata limits |
-| [Second loaded ZipDepth report](realtime-depth-macos27/loaded-zipdepth-batch-2-2026-09-28.md) | 512 and 672 observations, 896 pair and tail regression |
-| [Apple silicon optimization plan](apple-silicon-depth-optimization-plan.md) | Experiment intent, gates, deferred work, scope |
-| [Compute-plan findings](apple-silicon-depth-optimization/compute-plan-findings.md) | Device estimates and structural-ablation deferral |
-| [ZipDepth FP16 input findings](apple-silicon-depth-optimization/fp16-input-findings.md) | Input contracts, fidelity, isolated trials, optional app integration |
-| [DA2 FP16 input findings](apple-silicon-depth-optimization/da2-fp16-input-findings.md) | Halved input bytes, fidelity, tied graph/loaded results, Core ML bridge caveat |
-| [DA2 native SDPA findings](apple-silicon-depth-optimization/da2-sdpa-findings.md) | Correct conversion, paired regressions, rejected variant |
-| [DA3 compute-unit findings](apple-silicon-depth-optimization/da3-compute-unit-findings.md) | Three-trial protocol, output agreement, retained CPU + GPU route |
-| [Deployment compatibility](realtime-depth-macos27/compatibility.md) | Declared versus tested floors, graph downgrade failure, lower-target ZipDepth parity |
-| [Release notes](realtime-depth-macos27/release-notes.md) and [artifact manifest](../manifests/mpsgraph-depth-models-macos27-v0.1.0.json) | Included artifacts, exact contracts, provenance, compatibility and checksums |
-| [Realtime test checklist](../TEST_TODO_LIST.md) | Completed matrix, remaining combined-workload gates, rejected camera-token-disabled DA3 control |
-| [Build workflows](../scripts/README.md) and [licenses/notices](../THIRD_PARTY_NOTICES.md) | Reproduction and upstream terms |
+| [Full performance comparison](depth-performance-comparison.md) | All application runs, model-only results, and earlier times |
+| [macOS 27 application findings](realtime-depth-macos27/findings.md) | Timing definitions, test procedures, original runs, and images |
+| [First combined-workload report](realtime-depth-macos27/loaded-fp16-comparison-2026-09-28.md) | Depth Anything V2 and ZipDepth 1536, with face/foreground context and missing information |
+| [Second combined-workload report](realtime-depth-macos27/loaded-zipdepth-batch-2-2026-09-28.md) | ZipDepth 512, 672, and 896, including slower-time results |
+| [Apple silicon optimization plan](apple-silicon-depth-optimization-plan.md) | Experiment reasons, requirements, postponed work, and scope |
+| [Hardware-use findings](apple-silicon-depth-optimization/compute-plan-findings.md) | Expected hardware use and postponed model changes |
+| [ZipDepth 16-bit input findings](apple-silicon-depth-optimization/fp16-input-findings.md) | Input settings, output checks, model-only tests, and app options |
+| [Depth Anything V2 16-bit input findings](apple-silicon-depth-optimization/da2-fp16-input-findings.md) | Input bytes, output checks, and tied model/application results |
+| [Depth Anything V2 attention findings](apple-silicon-depth-optimization/da2-sdpa-findings.md) | Correct output, slower execution, and rejection |
+| [Depth Anything 3 hardware-choice findings](apple-silicon-depth-optimization/da3-compute-unit-findings.md) | Three-trial test procedure, output checks, and retained CPU + GPU choice |
+| [macOS compatibility](realtime-depth-macos27/compatibility.md) | Declared and tested versions, conversion failure, and older-target ZipDepth checks |
+| [Release notes](realtime-depth-macos27/release-notes.md) and [model manifest](../manifests/mpsgraph-depth-models-macos27-v0.1.0.json) | Included files, exact settings, versions, and checksums |
+| [Test checklist](../TEST_TODO_LIST.md) | Completed tests, next steps, and the rejected older Depth Anything 3 conversion |
+| [Build instructions](../scripts/README.md) and [licenses/notices](../THIRD_PARTY_NOTICES.md) | Repeating the work and upstream terms |
 
-## Appendix A: complete CLEAN application matrix
+## Appendix A: all depth-only results
 
-These are all 23 accepted depth-only captures. Model and complete-depth values
-are `median / p90 / p99`. `n` counts usable one-second diagnostic samples after
-excluding the initial sample before one second. It does not count depth frames.
-Duration is the last sampled elapsed time. The original duplicate 672 Core ML
-capture was discarded. Raw directories are linked and snapshots are embedded
-per row. Times in Appendices A and B are recomputed from raw samples and
-rounded to whole numbers.
+These are the 23 accepted depth-only runs. Both time columns show
+**typical / p90 / p99** readings. The input width identifies the model size;
+full dimensions are in the model reference table.
 
-| Capture | Shape | Backend / input | Duration / n | Model latency | Complete depth-source latency | Presentation median | Example |
+Duration is the last logged elapsed time. Readings count one-second samples
+after excluding the first sample before one second, rather than depth frames.
+A duplicate ZipDepth 672 Core ML run was discarded. Original logs are linked
+and all images are embedded. Times are calculated from the original readings
+and rounded to whole numbers.
+
+| Model | Input width | Method / input | Duration / readings | Model time | Full depth time | Display rate | Image |
 | --- | ---: | --- | ---: | ---: | ---: | ---: | --- |
-| [DA2 448](realtime-depth-macos27/captures/DA2_448x336_COREML_CLEAN) | 448 x 336 | Core ML image | 33 s / 33 | 16 / 16 / 17 ms | 17 / 18 / 21 ms | 60 fps | ![DA2 448 Core ML image CLEAN snapshot](../images/examples/da2-448x336-coreml-clean.png) |
-| [DA2 448](realtime-depth-macos27/captures/DA2_448x336_MPSGRAPH_FP32_CLEAN) | 448 x 336 | MPSGraph FP32 | 35 s / 36 | 15 / 15 / 16 ms | 15 / 16 / 16 ms | 60 fps | ![DA2 448 MPSGraph FP32 CLEAN snapshot](../images/examples/da2-448x336-mpsgraph-fp32-clean.png) |
-| [DA2 448](realtime-depth-macos27/captures/DA2_448x336_MPSGRAPH_FP16_CLEAN) | 448 x 336 | MPSGraph FP16 | 35 s / 35 | 15 / 16 / 16 ms | 15 / 16 / 16 ms | 60 fps | ![DA2 448 MPSGraph FP16 CLEAN snapshot](../images/examples/da2-448x336-mpsgraph-fp16-clean.png) |
-| [DA3 392](realtime-depth-macos27/captures/DA3_392x392_COREML_CLEAN) | 392 x 392 | Core ML image | 23 s / 24 | 15 / 16 / 18 ms | 16 / 17 / 19 ms | 60 fps | ![DA3 392 Core ML image CLEAN snapshot](../images/examples/da3-392x392-coreml-clean.png) |
-| [DA3 392](realtime-depth-macos27/captures/DA3_392x392_MPSGRAPH_FP32_CLEAN) | 392 x 392 | MPSGraph FP32 | 33 s / 33 | 15 / 16 / 16 ms | 16 / 16 / 18 ms | 60 fps | ![DA3 392 MPSGraph FP32 CLEAN snapshot](../images/examples/da3-392x392-mpsgraph-fp32-clean.png) |
-| [DA3 518](realtime-depth-macos27/captures/DA3_518x518_COREML_CLEAN) | 518 x 518 | Core ML image | 32 s / 32 | 45 / 54 / 58 ms | 49 / 55 / 61 ms | 60 fps | ![DA3 518 Core ML image CLEAN snapshot](../images/examples/da3-518x518-coreml-clean.png) |
-| [DA3 518](realtime-depth-macos27/captures/DA3_518x518_MPSGRAPH_FP32_CLEAN) | 518 x 518 | MPSGraph FP32 | 34 s / 35 | 49 / 50 / 50 ms | 50 / 53 / 54 ms | 60 fps | ![DA3 518 MPSGraph FP32 CLEAN snapshot](../images/examples/da3-518x518-mpsgraph-fp32-clean.png) |
-| [ZipDepth 384](realtime-depth-macos27/captures/ZIP_384x384_COREML_CLEAN) | 384 x 384 | Core ML image | 34 s / 34 | 7 / 8 / 8 ms | 8 / 9 / 11 ms | 60 fps | ![ZipDepth 384 Core ML image CLEAN snapshot](../images/examples/zipdepth-384x384-coreml-clean.png) |
-| [ZipDepth 384](realtime-depth-macos27/captures/ZIP_384x384_MPSGRAPH_FP32_CLEAN) | 384 x 384 | MPSGraph FP32 | 33 s / 34 | 6 / 6 / 6 ms | 6 / 6 / 7 ms | 60 fps | ![ZipDepth 384 MPSGraph FP32 CLEAN snapshot](../images/examples/zipdepth-384x384-mpsgraph-fp32-clean.png) |
-| [ZipDepth 384](realtime-depth-macos27/captures/ZIP_384x384_MPSGRAPH_FP16_CLEAN) | 384 x 384 | MPSGraph FP16 | 34 s / 34 | 6 / 7 / 7 ms | 6 / 7 / 7 ms | 60 fps | ![ZipDepth 384 MPSGraph FP16 CLEAN snapshot](../images/examples/zipdepth-384x384-mpsgraph-fp16-clean.png) |
-| [ZipDepth 512](realtime-depth-macos27/captures/ZIP_512x512_COREML_CLEAN) | 512 x 512 | Core ML image | 34 s / 34 | 10 / 10 / 11 ms | 11 / 12 / 13 ms | 60 fps | ![ZipDepth 512 Core ML image CLEAN snapshot](../images/examples/zipdepth-512x512-coreml-clean.png) |
-| [ZipDepth 512](realtime-depth-macos27/captures/ZIP_512x512_MPSGRAPH_FP32_CLEAN) | 512 x 512 | MPSGraph FP32 | 34 s / 35 | 8 / 8 / 9 ms | 8 / 8 / 9 ms | 60 fps | ![ZipDepth 512 MPSGraph FP32 CLEAN snapshot](../images/examples/zipdepth-512x512-mpsgraph-fp32-clean.png) |
-| [ZipDepth 672](realtime-depth-macos27/captures/ZIP_672x384_COREML_CLEAN) | 672 x 384 | Core ML image | 33 s / 33 | 10 / 10 / 11 ms | 11 / 12 / 12 ms | 60 fps | ![ZipDepth 672 Core ML image CLEAN snapshot](../images/examples/zipdepth-672x384-coreml-clean.png) |
-| [ZipDepth 672](realtime-depth-macos27/captures/ZIP_672x384_MPSGRAPH_FP32_CLEAN) | 672 x 384 | MPSGraph FP32 | 34 s / 35 | 8 / 9 / 9 ms | 8 / 9 / 9 ms | 60 fps | ![ZipDepth 672 MPSGraph FP32 CLEAN snapshot](../images/examples/zipdepth-672x384-mpsgraph-fp32-clean.png) |
-| [ZipDepth 896](realtime-depth-macos27/captures/ZIP_896x512_COREML_CLEAN) | 896 x 512 | Core ML image | 34 s / 35 | 10 / 10 / 11 ms | 11 / 12 / 12 ms | 60 fps | ![ZipDepth 896 Core ML image CLEAN snapshot](../images/examples/zipdepth-896x512-coreml-clean.png) |
-| [ZipDepth 896](realtime-depth-macos27/captures/ZIP_896x512_MPSGRAPH_FP32_CLEAN) | 896 x 512 | MPSGraph FP32 | 32 s / 32 | 12 / 13 / 13 ms | 13 / 13 / 17 ms | 60 fps | ![ZipDepth 896 MPSGraph FP32 CLEAN snapshot](../images/examples/zipdepth-896x512-mpsgraph-fp32-clean.png) |
-| [ZipDepth 896](realtime-depth-macos27/captures/ZIP_896x512_MPSGRAPH_FP16_CLEAN) | 896 x 512 | MPSGraph FP16 | 33 s / 33 | 12 / 13 / 13 ms | 12 / 13 / 13 ms | 60 fps | ![ZipDepth 896 MPSGraph FP16 CLEAN snapshot](../images/examples/zipdepth-896x512-mpsgraph-fp16-clean.png) |
-| [ZipDepth 1536](realtime-depth-macos27/captures/ZIP_1536x864_COREML_CLEAN) | 1536 x 864 | Core ML image | 35 s / 35 | 34 / 35 / 35 ms | 36 / 36 / 37 ms | 60 fps | ![ZipDepth 1536 Core ML image CLEAN snapshot](../images/examples/zipdepth-1536x864-coreml-clean.png) |
-| [ZipDepth 1536](realtime-depth-macos27/captures/ZIP_1536x864_MPSGRAPH_FP32_CLEAN) | 1536 x 864 | MPSGraph FP32 | 35 s / 35 | 15 / 20 / 23 ms | 15 / 21 / 25 ms | 60 fps | ![ZipDepth 1536 MPSGraph FP32 CLEAN snapshot](../images/examples/zipdepth-1536x864-mpsgraph-fp32-clean.png) |
-| [ZipDepth 1536](realtime-depth-macos27/captures/ZIP_1536x864_MPSGRAPH_FP16_CLEAN) | 1536 x 864 | MPSGraph FP16 | 34 s / 34 | 15 / 15 / 17 ms | 15 / 16 / 17 ms | 60 fps | ![ZipDepth 1536 MPSGraph FP16 CLEAN snapshot](../images/examples/zipdepth-1536x864-mpsgraph-fp16-clean.png) |
-| [ZipDepth 1920](realtime-depth-macos27/captures/ZIP_1920x1088_COREML_CLEAN) | 1920 x 1088 | Core ML image | 34 s / 34 | 61 / 61 / 61 ms | 62 / 62 / 62 ms | 60 fps | ![ZipDepth 1920 Core ML image CLEAN snapshot](../images/examples/zipdepth-1920x1088-coreml-clean.png) |
-| [ZipDepth 1920](realtime-depth-macos27/captures/ZIP_1920x1088_MPSGRAPH_FP32_CLEAN) | 1920 x 1088 | MPSGraph FP32 | 33 s / 34 | 43 / 46 / 56 ms | 44 / 47 / 53 ms | 60 fps | ![ZipDepth 1920 MPSGraph FP32 CLEAN snapshot](../images/examples/zipdepth-1920x1088-mpsgraph-fp32-clean.png) |
-| [ZipDepth 1920](realtime-depth-macos27/captures/ZIP_1920x1088_MPSGRAPH_FP16_CLEAN) | 1920 x 1088 | MPSGraph FP16 | 34 s / 34 | 44 / 46 / 48 ms | 45 / 46 / 47 ms | 59 fps | ![ZipDepth 1920 MPSGraph FP16 CLEAN snapshot](../images/examples/zipdepth-1920x1088-mpsgraph-fp16-clean.png) |
+| [Depth Anything V2 448](realtime-depth-macos27/captures/DA2_448x336_COREML_CLEAN) | 448 | Core ML image | 33 s / 33 | 16 / 16 / 17 ms | 17 / 18 / 21 ms | 60 fps | ![Depth Anything V2 448 Core ML image depth-only snapshot](../images/examples/da2-448x336-coreml-clean.png) |
+| [Depth Anything V2 448](realtime-depth-macos27/captures/DA2_448x336_MPSGRAPH_FP32_CLEAN) | 448 | MPSGraph FP32 | 35 s / 36 | 15 / 15 / 16 ms | 15 / 16 / 16 ms | 60 fps | ![Depth Anything V2 448 MPSGraph FP32 depth-only snapshot](../images/examples/da2-448x336-mpsgraph-fp32-clean.png) |
+| [Depth Anything V2 448](realtime-depth-macos27/captures/DA2_448x336_MPSGRAPH_FP16_CLEAN) | 448 | MPSGraph FP16 | 35 s / 35 | 15 / 16 / 16 ms | 15 / 16 / 16 ms | 60 fps | ![Depth Anything V2 448 MPSGraph FP16 depth-only snapshot](../images/examples/da2-448x336-mpsgraph-fp16-clean.png) |
+| [Depth Anything 3 392](realtime-depth-macos27/captures/DA3_392x392_COREML_CLEAN) | 392 | Core ML image | 23 s / 24 | 15 / 16 / 18 ms | 16 / 17 / 19 ms | 60 fps | ![Depth Anything 3 392 Core ML image depth-only snapshot](../images/examples/da3-392x392-coreml-clean.png) |
+| [Depth Anything 3 392](realtime-depth-macos27/captures/DA3_392x392_MPSGRAPH_FP32_CLEAN) | 392 | MPSGraph FP32 | 33 s / 33 | 15 / 16 / 16 ms | 16 / 16 / 18 ms | 60 fps | ![Depth Anything 3 392 MPSGraph FP32 depth-only snapshot](../images/examples/da3-392x392-mpsgraph-fp32-clean.png) |
+| [Depth Anything 3 518](realtime-depth-macos27/captures/DA3_518x518_COREML_CLEAN) | 518 | Core ML image | 32 s / 32 | 45 / 54 / 58 ms | 49 / 55 / 61 ms | 60 fps | ![Depth Anything 3 518 Core ML image depth-only snapshot](../images/examples/da3-518x518-coreml-clean.png) |
+| [Depth Anything 3 518](realtime-depth-macos27/captures/DA3_518x518_MPSGRAPH_FP32_CLEAN) | 518 | MPSGraph FP32 | 34 s / 35 | 49 / 50 / 50 ms | 50 / 53 / 54 ms | 60 fps | ![Depth Anything 3 518 MPSGraph FP32 depth-only snapshot](../images/examples/da3-518x518-mpsgraph-fp32-clean.png) |
+| [ZipDepth 384](realtime-depth-macos27/captures/ZIP_384x384_COREML_CLEAN) | 384 | Core ML image | 34 s / 34 | 7 / 8 / 8 ms | 8 / 9 / 11 ms | 60 fps | ![ZipDepth 384 Core ML image depth-only snapshot](../images/examples/zipdepth-384x384-coreml-clean.png) |
+| [ZipDepth 384](realtime-depth-macos27/captures/ZIP_384x384_MPSGRAPH_FP32_CLEAN) | 384 | MPSGraph FP32 | 33 s / 34 | 6 / 6 / 6 ms | 6 / 6 / 7 ms | 60 fps | ![ZipDepth 384 MPSGraph FP32 depth-only snapshot](../images/examples/zipdepth-384x384-mpsgraph-fp32-clean.png) |
+| [ZipDepth 384](realtime-depth-macos27/captures/ZIP_384x384_MPSGRAPH_FP16_CLEAN) | 384 | MPSGraph FP16 | 34 s / 34 | 6 / 7 / 7 ms | 6 / 7 / 7 ms | 60 fps | ![ZipDepth 384 MPSGraph FP16 depth-only snapshot](../images/examples/zipdepth-384x384-mpsgraph-fp16-clean.png) |
+| [ZipDepth 512](realtime-depth-macos27/captures/ZIP_512x512_COREML_CLEAN) | 512 | Core ML image | 34 s / 34 | 10 / 10 / 11 ms | 11 / 12 / 13 ms | 60 fps | ![ZipDepth 512 Core ML image depth-only snapshot](../images/examples/zipdepth-512x512-coreml-clean.png) |
+| [ZipDepth 512](realtime-depth-macos27/captures/ZIP_512x512_MPSGRAPH_FP32_CLEAN) | 512 | MPSGraph FP32 | 34 s / 35 | 8 / 8 / 9 ms | 8 / 8 / 9 ms | 60 fps | ![ZipDepth 512 MPSGraph FP32 depth-only snapshot](../images/examples/zipdepth-512x512-mpsgraph-fp32-clean.png) |
+| [ZipDepth 672](realtime-depth-macos27/captures/ZIP_672x384_COREML_CLEAN) | 672 | Core ML image | 33 s / 33 | 10 / 10 / 11 ms | 11 / 12 / 12 ms | 60 fps | ![ZipDepth 672 Core ML image depth-only snapshot](../images/examples/zipdepth-672x384-coreml-clean.png) |
+| [ZipDepth 672](realtime-depth-macos27/captures/ZIP_672x384_MPSGRAPH_FP32_CLEAN) | 672 | MPSGraph FP32 | 34 s / 35 | 8 / 9 / 9 ms | 8 / 9 / 9 ms | 60 fps | ![ZipDepth 672 MPSGraph FP32 depth-only snapshot](../images/examples/zipdepth-672x384-mpsgraph-fp32-clean.png) |
+| [ZipDepth 896](realtime-depth-macos27/captures/ZIP_896x512_COREML_CLEAN) | 896 | Core ML image | 34 s / 35 | 10 / 10 / 11 ms | 11 / 12 / 12 ms | 60 fps | ![ZipDepth 896 Core ML image depth-only snapshot](../images/examples/zipdepth-896x512-coreml-clean.png) |
+| [ZipDepth 896](realtime-depth-macos27/captures/ZIP_896x512_MPSGRAPH_FP32_CLEAN) | 896 | MPSGraph FP32 | 32 s / 32 | 12 / 13 / 13 ms | 13 / 13 / 17 ms | 60 fps | ![ZipDepth 896 MPSGraph FP32 depth-only snapshot](../images/examples/zipdepth-896x512-mpsgraph-fp32-clean.png) |
+| [ZipDepth 896](realtime-depth-macos27/captures/ZIP_896x512_MPSGRAPH_FP16_CLEAN) | 896 | MPSGraph FP16 | 33 s / 33 | 12 / 13 / 13 ms | 12 / 13 / 13 ms | 60 fps | ![ZipDepth 896 MPSGraph FP16 depth-only snapshot](../images/examples/zipdepth-896x512-mpsgraph-fp16-clean.png) |
+| [ZipDepth 1536](realtime-depth-macos27/captures/ZIP_1536x864_COREML_CLEAN) | 1536 | Core ML image | 35 s / 35 | 34 / 35 / 35 ms | 36 / 36 / 37 ms | 60 fps | ![ZipDepth 1536 Core ML image depth-only snapshot](../images/examples/zipdepth-1536x864-coreml-clean.png) |
+| [ZipDepth 1536](realtime-depth-macos27/captures/ZIP_1536x864_MPSGRAPH_FP32_CLEAN) | 1536 | MPSGraph FP32 | 35 s / 35 | 15 / 20 / 23 ms | 15 / 21 / 25 ms | 60 fps | ![ZipDepth 1536 MPSGraph FP32 depth-only snapshot](../images/examples/zipdepth-1536x864-mpsgraph-fp32-clean.png) |
+| [ZipDepth 1536](realtime-depth-macos27/captures/ZIP_1536x864_MPSGRAPH_FP16_CLEAN) | 1536 | MPSGraph FP16 | 34 s / 34 | 15 / 15 / 17 ms | 15 / 16 / 17 ms | 60 fps | ![ZipDepth 1536 MPSGraph FP16 depth-only snapshot](../images/examples/zipdepth-1536x864-mpsgraph-fp16-clean.png) |
+| [ZipDepth 1920](realtime-depth-macos27/captures/ZIP_1920x1088_COREML_CLEAN) | 1920 | Core ML image | 34 s / 34 | 61 / 61 / 61 ms | 62 / 62 / 62 ms | 60 fps | ![ZipDepth 1920 Core ML image depth-only snapshot](../images/examples/zipdepth-1920x1088-coreml-clean.png) |
+| [ZipDepth 1920](realtime-depth-macos27/captures/ZIP_1920x1088_MPSGRAPH_FP32_CLEAN) | 1920 | MPSGraph FP32 | 33 s / 34 | 43 / 46 / 56 ms | 44 / 47 / 53 ms | 60 fps | ![ZipDepth 1920 MPSGraph FP32 depth-only snapshot](../images/examples/zipdepth-1920x1088-mpsgraph-fp32-clean.png) |
+| [ZipDepth 1920](realtime-depth-macos27/captures/ZIP_1920x1088_MPSGRAPH_FP16_CLEAN) | 1920 | MPSGraph FP16 | 34 s / 34 | 44 / 46 / 48 ms | 45 / 46 / 47 ms | 59 fps | ![ZipDepth 1920 MPSGraph FP16 depth-only snapshot](../images/examples/zipdepth-1920x1088-mpsgraph-fp16-clean.png) |
 
-## Appendix B: complete loaded application observations
+## Appendix B: all combined-workload results
 
-The following 11 captures all used MPSGraph with active foreground and face
-analysis. Eight have embedded depth configuration; three older rows have only
-user-assigned engine identities. Timing values are `median / p90 / p99`.
-The last column contains foreground-model and face-latency medians, rather
-than a combined pipeline time. All ended normally with zero dropped events.
+These 11 runs used MPSGraph with face and foreground processing active. Eight
+record the exact model settings; the three older runs only have user-assigned
+model names. Time columns show **typical / p90 / p99** readings. The final
+column gives foreground-model and face times separately. Every run finished
+normally without lost log events.
 
-| Capture | Shape | Input | Duration / n | Model latency | Complete depth-source latency | Presentation median | Foreground / face median |
+| Model | Input width | Input type | Duration / readings | Model time | Full depth time | Display rate | Foreground / face time |
 | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: |
-| [DA2 legacy](realtime-depth-macos27/captures/DA2_MPS)† | Not recorded | Not recorded | 30 s / 30 | 17 / 20 / 55 ms | 17 / 21 / 56 ms | 60 fps | 20 / 22 ms |
-| [DA2 FP32](realtime-depth-macos27/captures/DA2_448x336_MPSGRAPH_FP32_LOADED) | 448 x 336 | FP32 | 35 s / 36 | 29 / 31 / 32 ms | 30 / 32 / 33 ms | 58 fps | 18 / 35 ms |
-| [DA2 FP16](realtime-depth-macos27/captures/DA2_448x336_MPSGRAPH_FP16_LOADED) | 448 x 336 | FP16 | 35 s / 35 | 29 / 31 / 33 ms | 30 / 32 / 34 ms | 58 fps | 18 / 35 ms |
-| [DA3 Small legacy](realtime-depth-macos27/captures/DA3_SM_MPS)† | Not recorded | Not recorded | 15 s / 16 | 34 / 39 / 42 ms | 32 / 39 / 42 ms | 57 fps | 18 / 39 ms |
-| [ZipDepth legacy](realtime-depth-macos27/captures/ZIP_MPS)† | Not recorded | Not recorded | 14 s / 14 | 5 / 5 / 5 ms | 5 / 5 / 6 ms | 60 fps | 18 / 9 ms |
-| [ZipDepth FP32](realtime-depth-macos27/captures/ZIP_512x512_MPSGRAPH_FP32_LOADED) | 512 x 512 | FP32 | 34 s / 35 | 6 / 7 / 8 ms | 7 / 8 / 9 ms | 60 fps | 22 / 11 ms |
-| [ZipDepth FP32](realtime-depth-macos27/captures/ZIP_672x384_MPSGRAPH_FP32_LOADED) | 672 x 384 | FP32 | 38 s / 38 | 6 / 8 / 8 ms | 6 / 8 / 8 ms | 60 fps | 18 / 11 ms |
-| [ZipDepth FP32](realtime-depth-macos27/captures/ZIP_896x512_MPSGRAPH_FP32_LOADED) | 896 x 512 | FP32 | 35 s / 36 | 9 / 9 / 9 ms | 9 / 9 / 9 ms | 60 fps | 18 / 12 ms |
-| [ZipDepth FP16](realtime-depth-macos27/captures/ZIP_896x512_MPSGRAPH_FP16_LOADED) | 896 x 512 | FP16 | 38 s / 38 | 8 / 9 / 12 ms | 8 / 10 / 13 ms | 60 fps | 19 / 12 ms |
-| [ZipDepth FP32](realtime-depth-macos27/captures/ZIP_1536x864_MPSGRAPH_FP32_LOADED) | 1536 x 864 | FP32 | 36 s / 36 | 27 / 31 / 32 ms | 29 / 32 / 32 ms | 51 fps | 19 / 40 ms |
-| [ZipDepth FP16](realtime-depth-macos27/captures/ZIP_1536x864_MPSGRAPH_FP16_LOADED) | 1536 x 864 | FP16 | 42 s / 42 | 26 / 31 / 32 ms | 28 / 32 / 32 ms | 51 fps | 18 / 39 ms |
+| [Depth Anything V2 (older run)](realtime-depth-macos27/captures/DA2_MPS)† | Not recorded | Not recorded | 30 s / 30 | 17 / 20 / 55 ms | 17 / 21 / 56 ms | 60 fps | 20 / 22 ms |
+| [Depth Anything V2 448 FP32](realtime-depth-macos27/captures/DA2_448x336_MPSGRAPH_FP32_LOADED) | 448 | FP32 | 35 s / 36 | 29 / 31 / 32 ms | 30 / 32 / 33 ms | 58 fps | 18 / 35 ms |
+| [Depth Anything V2 448 FP16](realtime-depth-macos27/captures/DA2_448x336_MPSGRAPH_FP16_LOADED) | 448 | FP16 | 35 s / 35 | 29 / 31 / 33 ms | 30 / 32 / 34 ms | 58 fps | 18 / 35 ms |
+| [Depth Anything 3 (older run)](realtime-depth-macos27/captures/DA3_SM_MPS)† | Not recorded | Not recorded | 15 s / 16 | 34 / 39 / 42 ms | 32 / 39 / 42 ms | 57 fps | 18 / 39 ms |
+| [ZipDepth (older run)](realtime-depth-macos27/captures/ZIP_MPS)† | Not recorded | Not recorded | 14 s / 14 | 5 / 5 / 5 ms | 5 / 5 / 6 ms | 60 fps | 18 / 9 ms |
+| [ZipDepth 512 FP32](realtime-depth-macos27/captures/ZIP_512x512_MPSGRAPH_FP32_LOADED) | 512 | FP32 | 34 s / 35 | 6 / 7 / 8 ms | 7 / 8 / 9 ms | 60 fps | 22 / 11 ms |
+| [ZipDepth 672 FP32](realtime-depth-macos27/captures/ZIP_672x384_MPSGRAPH_FP32_LOADED) | 672 | FP32 | 38 s / 38 | 6 / 8 / 8 ms | 6 / 8 / 8 ms | 60 fps | 18 / 11 ms |
+| [ZipDepth 896 FP32](realtime-depth-macos27/captures/ZIP_896x512_MPSGRAPH_FP32_LOADED) | 896 | FP32 | 35 s / 36 | 9 / 9 / 9 ms | 9 / 9 / 9 ms | 60 fps | 18 / 12 ms |
+| [ZipDepth 896 FP16](realtime-depth-macos27/captures/ZIP_896x512_MPSGRAPH_FP16_LOADED) | 896 | FP16 | 38 s / 38 | 8 / 9 / 12 ms | 8 / 10 / 13 ms | 60 fps | 19 / 12 ms |
+| [ZipDepth 1536 FP32](realtime-depth-macos27/captures/ZIP_1536x864_MPSGRAPH_FP32_LOADED) | 1536 | FP32 | 36 s / 36 | 27 / 31 / 32 ms | 29 / 32 / 32 ms | 51 fps | 19 / 40 ms |
+| [ZipDepth 1536 FP16](realtime-depth-macos27/captures/ZIP_1536x864_MPSGRAPH_FP16_LOADED) | 1536 | FP16 | 42 s / 42 | 26 / 31 / 32 ms | 28 / 32 / 32 ms | 51 fps | 18 / 39 ms |
 
-† The three legacy captures date to 2026-09-25 and predate
-`capture.configuration`. Their shapes and input types cannot be recovered.
-DA3 saw zero to four faces per sample, DA2 zero to two, and ZipDepth one to two.
-DA2 and DA3 each logged one source-frame decode failure. These different live
-workloads do not establish a controlled family/shape ranking.
+† The three older runs date to 2026-09-25, before `capture.configuration` was
+added. Their input sizes and types cannot be recovered. Depth Anything 3 saw
+zero to four faces per reading, Depth Anything V2 zero to two, and ZipDepth
+one to two. Both Depth Anything runs logged one source-frame decode failure.
+These different live workloads cannot establish a controlled model ranking.
 
-The eight configured 2026-09-28 captures record exact depth identities and
-MPSMediaPipe face analysis. Face count ranged from zero to four except for the
-DA2 FP16 run, which recorded one to four. Source segment, full analysis/effect
-settings, matched visual layers, memory, and host/build identity remain absent.
-Zero dropped diagnostic events refers to the log, rather than proof of zero
-dropped or superseded depth requests.
+The eight 2026-09-28 runs record depth settings and MPSMediaPipe face
+processing. Face count ranged from zero to four except for the Depth Anything
+V2 16-bit run, which recorded one to four. Source segment, complete effect and
+analysis settings, matching images, memory use, and full computer/app versions
+were not recorded. Losing no log events does not establish whether the app
+replaced or discarded any depth requests.
 
-## Appendix C: standalone timing comparisons
+## Appendix C: model-only tests
 
-### Paired conversion and optimization experiments
+### Paired model changes
 
-These rows aggregate three alternating trials from each study. Each displayed
-statistic is the median of that statistic across the three runs. The MPSGraph
-harness uses synchronous completion and excludes texture resize, Metal packing,
-unpacking, and output upscale. The Core ML rows include their documented host
-bridge. Compare only within a row. Timing values are `median / p90 / p99`.
+Each row combines three trials with alternating order. Each value is the
+middle of the three trial summaries. The MPSGraph test waits for GPU work to
+finish, uses `.level0`, and excludes resizing, preparing input, reading depth
+output, and fitting that output back to the source image. The tests use 20
+warm-up calls; first MPSGraph trials have 200 measured calls and later trials
+have 100. Core ML rows include their documented Python image or number-array
+handling. Compare original and changed versions within a row. Times show
+**typical / p90 / p99** readings.
 
-| Study | Runtime | Shape | Baseline timing | Candidate timing | Result |
+| Experiment | Method | Input width | Original time | Changed version time | Result |
 | --- | --- | ---: | ---: | ---: | --- |
-| [DA2 classic vs native SDPA](apple-silicon-depth-optimization/da2-sdpa-findings.md) | Core ML CPU + GPU | 448 x 336 | Classic 17 / 18 / 19 ms | SDPA 17 / 18 / 19 ms | SDPA slower; rejected |
-| [DA2 classic vs native SDPA](apple-silicon-depth-optimization/da2-sdpa-findings.md) | MPSGraph | 448 x 336 | Classic 12 / 12 / 12 ms | SDPA 12 / 13 / 13 ms | SDPA slower; rejected |
-| [DA2 FP32 vs FP16 graph input](apple-silicon-depth-optimization/da2-fp16-input-findings.md) | MPSGraph | 448 x 336 | FP32 12 / 12 / 12 ms | FP16 12 / 12 / 12 ms | Tied |
-| [DA2 image vs FP16 tensor input](apple-silicon-depth-optimization/da2-fp16-input-findings.md) | Core ML CPU + GPU | 448 x 336 | Image 18 / 20 / 22 ms | Tensor 21 / 22 / 23 ms | Tensor slower; bridges differ |
-| [ZipDepth FP32 vs FP16 graph input](apple-silicon-depth-optimization/fp16-input-findings.md) | MPSGraph | 384 x 384 | FP32 8 / 13 / 19 ms | FP16 6 / 8 / 14 ms | FP16 faster |
-| [ZipDepth FP32 vs FP16 graph input](apple-silicon-depth-optimization/fp16-input-findings.md) | MPSGraph | 896 x 512 | FP32 6 / 9 / 11 ms | FP16 6 / 9 / 10 ms | Median tied |
-| [ZipDepth FP32 vs FP16 graph input](apple-silicon-depth-optimization/fp16-input-findings.md) | MPSGraph | 1536 x 864 | FP32 15 / 18 / 22 ms | FP16 15 / 19 / 23 ms | Tied |
-| [ZipDepth FP32 vs FP16 graph input](apple-silicon-depth-optimization/fp16-input-findings.md) | MPSGraph | 1920 x 1088 | FP32 22 / 25 / 31 ms | FP16 22 / 26 / 30 ms | Tied |
+| [Depth Anything V2 448: original vs built-in attention (SDPA)](apple-silicon-depth-optimization/da2-sdpa-findings.md) | Core ML CPU + GPU | 448 | Original 17 / 18 / 19 ms | SDPA 17 / 18 / 19 ms | SDPA slower; rejected |
+| [Depth Anything V2 448: original vs built-in attention (SDPA)](apple-silicon-depth-optimization/da2-sdpa-findings.md) | MPSGraph | 448 | Original 12 / 12 / 12 ms | SDPA 12 / 13 / 13 ms | SDPA slower; rejected |
+| [Depth Anything V2 448: 32-bit vs 16-bit input](apple-silicon-depth-optimization/da2-fp16-input-findings.md) | MPSGraph | 448 | FP32 12 / 12 / 12 ms | FP16 12 / 12 / 12 ms | Tied |
+| [Depth Anything V2 448: image vs number-array input](apple-silicon-depth-optimization/da2-fp16-input-findings.md) | Core ML CPU + GPU | 448 | Image 18 / 20 / 22 ms | Array 21 / 22 / 23 ms | Number-array input slower; test-program overhead differs |
+| [ZipDepth 384: 32-bit vs 16-bit input](apple-silicon-depth-optimization/fp16-input-findings.md) | MPSGraph | 384 | FP32 8 / 13 / 19 ms | FP16 6 / 8 / 14 ms | FP16 faster |
+| [ZipDepth 896: 32-bit vs 16-bit input](apple-silicon-depth-optimization/fp16-input-findings.md) | MPSGraph | 896 | FP32 6 / 9 / 11 ms | FP16 6 / 9 / 10 ms | Median tied |
+| [ZipDepth 1536: 32-bit vs 16-bit input](apple-silicon-depth-optimization/fp16-input-findings.md) | MPSGraph | 1536 | FP32 15 / 18 / 22 ms | FP16 15 / 19 / 23 ms | Tied |
+| [ZipDepth 1920: 32-bit vs 16-bit input](apple-silicon-depth-optimization/fp16-input-findings.md) | MPSGraph | 1920 | FP32 22 / 25 / 31 ms | FP16 22 / 26 / 30 ms | Tied |
 
-All conversion-quality gates for these candidates passed. Numerical-error
-tables and individual-run links remain in the study pages.
+All changed versions passed their output checks. The experiment reports in
+the source index retain each trial and its detailed error measurements.
 
-### DA3 Core ML compute-unit sweep
+### Depth Anything 3 hardware choices
 
-This dedicated 392 x 392 harness loaded all three configured Core ML instances,
-rotated their execution order, and collected 100 timed predictions after 20
-warmups. Values are medians of the three reported run statistics.
+The size-392 test kept all three Core ML model instances loaded, changed the
+call order each time, and measured 100 predictions after 20 warm-up calls.
+It reused one bicubic-resized image. Times include the synchronous Core ML
+prediction call and Python/PIL image handling. Values below are the middle
+of the three trial summaries. These tests used Python 3.11.15 and Core ML
+Tools 9.0 on the M1 Max/macOS 27/Xcode 27 environment.
 
-| Compute units | Median | p90 | p99 | Decision |
+| Hardware choice | Typical | Slower (p90) | Slowest (p99) | Decision |
 | --- | ---: | ---: | ---: | --- |
 | CPU + GPU | 24 ms | 27 ms | 30 ms | Retained |
 | CPU + Neural Engine | 30 ms | 31 ms | 33 ms | 25% slower; rejected |
 | All | 30 ms | 31 ms | 33 ms | 23% slower; rejected |
 
-See the [DA3 compute-unit findings](apple-silicon-depth-optimization/da3-compute-unit-findings.md)
-for per-run values, output agreement, and protocol details.
+The [original report](apple-silicon-depth-optimization/da3-compute-unit-findings.md)
+records exact model/input checksums, individual trial values, output agreement,
+and the repeatable command. Neural Engine and all-device options were slower
+in all three trials. Neither a size-518 hardware test nor an additional app
+option advanced from this result.
 
-### Earlier standalone reference medians
+### Earlier model-only reference times
 
-These recorded medians came from earlier small harnesses. Some raw per-call
-samples are unavailable, and the protocols differ, so the table preserves
-historical route comparisons rather than forming a cross-model ranking.
+These earlier tests used different programs and conditions. Some original
+per-call data is unavailable. They preserve comparisons made at the time,
+rather than a common speed ranking across models.
 
-| Model | Shape | Core ML route and median | MPSGraph median | Recorded conclusion |
+| Model | Input width | Core ML choice and typical time | MPSGraph typical time | Earlier conclusion |
 | --- | ---: | --- | ---: | --- |
-| ZipDepth Base NPU | 384 x 384 | All 3 ms; CPU + Neural Engine 3 ms; CPU + GPU 13 ms | 3 ms | Motivated the ZipDepth residency and graph studies |
-| DA2 Small | 448 x 336 | CPU + GPU 15 ms | 15 ms | Similar GPU routes |
-| DA2 Small | 448 x 336 | CPU + Neural Engine 23 ms | 16 ms | Keep Core ML on CPU + GPU |
-| DA3 Small | 392 x 392 | CPU + GPU 17 ms | 15 ms | Similar small-shape routes in this harness |
-| DA3 Small | 518 x 518 | CPU + GPU 24 ms | 40 ms | Core ML faster at the larger shape |
+| ZipDepth 384 | 384 | All 3 ms; CPU + Neural Engine 3 ms; CPU + GPU 13 ms | 3 ms | Led to the ZipDepth hardware and MPSGraph tests |
+| Depth Anything V2 448 | 448 | CPU + GPU 15 ms | 15 ms | Similar times |
+| Depth Anything V2 448 | 448 | CPU + Neural Engine 23 ms | 16 ms | Keep Core ML on CPU + GPU |
+| Depth Anything 3 392 | 392 | CPU + GPU 17 ms | 15 ms | Similar times in this test program |
+| Depth Anything 3 518 | 518 | CPU + GPU 24 ms | 40 ms | Core ML faster at the larger shape |
 
-The newer DA3 compute-unit sweep supersedes the earlier 392 x 392 value for
-choosing Core ML compute units. It does not replace that historical backend
-comparison because its runtime state and protocol differ.
+The newer Depth Anything 3 hardware test determines its Core ML hardware
+choice. It does not replace the earlier Core ML-versus-MPSGraph comparison,
+which used a different procedure and model-loading state.
 
-The older DA2 GPU comparison used eight images, seven interleaved predictions
-per backend per image, discarding the first two; its aggregate is the median
-of eight per-image medians. Broader numerical validation across 11 images
-found zero absolute Core ML-versus-graph output difference. The Neural Engine
-comparison used one image and 32 interleaved predictions per backend,
-discarding the first 12. Its output MAE was 4,250 millionths, RMSE 8,730
-millionths, and maximum absolute difference 185,550 millionths, with no
-nonfinite values. Both excluded input
-preparation and output readback and used macOS 26.5.2/Xcode 26.6 on the M1 Max.
-Original raw per-call samples and that harness are unavailable in this
-repository, so those aggregates retain their documented historical limits.
+The older Depth Anything V2 GPU test used eight images with seven alternating
+calls per method and image, discarding the first two. Its result is the middle
+of the eight image summaries. A broader check across 11 images found exactly
+the same Core ML and MPSGraph output.
 
-## Appendix D: Core ML placement context
+The older Neural Engine test used one image and 32 alternating calls per
+method, discarding the first 12. Output MAE was 4,250 millionths, RMSE 8,730
+millionths, and largest difference 185,550 millionths; no invalid numbers were
+produced. Both older comparisons excluded image preparation and reading the
+output. They ran on the M1 Max with macOS 26.5.2 and Xcode 26.6. The original
+program and per-call measurements are unavailable here, so their conclusions
+retain those limits.
 
-These six compute plans were generated on the M1 Max/Mac Studio, macOS 27.0
-build 26A428, and Xcode 27.0 build 27A266a. Percentages describe preferred,
-normalized estimated cost within a configuration, rather than percentages of
-measured runtime or a comparison of total work between models.
+## Appendix D: expected hardware use
 
-| Model | `.all` preferred estimated cost | CPU + Neural Engine preferred estimated cost | CPU + Neural Engine non-ANE operations |
+These six Core ML reports were created on the M1 Max/Mac Studio, macOS 27.0
+build 26A428, and Xcode 27.0 build 27A266a. Percentages are estimated shares
+of work within each hardware choice. They do not measure time, and cannot be
+used to compare total work between different models.
+
+| Model | Expected work with all devices allowed | Expected work with CPU + Neural Engine | Work expected outside Neural Engine |
 | --- | --- | --- | --- |
-| ZipDepth 384 x 384 | 96% Neural Engine, 4% CPU | 96% Neural Engine, 4% CPU | FP32 input scale and FP16 cast |
-| ZipDepth 896 x 512 | 96% Neural Engine, 4% CPU | 96% Neural Engine, 4% CPU | FP32 input scale and FP16 cast |
-| ZipDepth 1536 x 864 | 90% Neural Engine, 10% GPU | 96% Neural Engine, 4% CPU | FP32 input scale and FP16 cast |
-| DA2 Small 448 x 336 | 95% Neural Engine, 5% GPU | 98% Neural Engine, 2% CPU | Initial preprocessing and patch convolution |
-| DA3 Small 392 x 392 | 97% Neural Engine, 3% GPU | 98% Neural Engine, 2% CPU | Initial preprocessing, reshape, expand, and patch convolution |
-| DA3 Small 518 x 518 | 94% Neural Engine, 6% GPU | 97% Neural Engine, 3% CPU | Initial preprocessing, reshape, expand, and patch convolution |
+| ZipDepth 384 | 96% Neural Engine, 4% CPU | 96% Neural Engine, 4% CPU | Input scaling and conversion to 16-bit |
+| ZipDepth 896 | 96% Neural Engine, 4% CPU | 96% Neural Engine, 4% CPU | Input scaling and conversion to 16-bit |
+| ZipDepth 1536 | 90% Neural Engine, 10% GPU | 96% Neural Engine, 4% CPU | Input scaling and conversion to 16-bit |
+| Depth Anything V2 448 | 95% Neural Engine, 5% GPU | 98% Neural Engine, 2% CPU | Initial input preparation and image-patch processing |
+| Depth Anything 3 392 | 97% Neural Engine, 3% GPU | 98% Neural Engine, 2% CPU | Initial input preparation, changing array layout, and image-patch processing |
+| Depth Anything 3 518 | 94% Neural Engine, 6% GPU | 97% Neural Engine, 3% CPU | Initial input preparation, changing array layout, and image-patch processing |
 
-Under CPU plus Neural Engine, all 120 ZipDepth nonconstant operations after the
-two input-conversion operations prefer Neural Engine. DA2 assigns 352
-nonconstant operations to Neural Engine; its five CPU-preferred operations
-include initial preprocessing and patch convolution. DA3's native SDPA is
-supported on CPU, GPU, and Neural Engine; under `all`, its first attention block
-prefers GPU and the remaining eleven prefer Neural Engine.
+With CPU plus Neural Engine selected, the plan prefers Neural Engine for all
+120 ZipDepth calculation operations after the two input-conversion steps.
+For Depth Anything V2, it assigns 352 calculation operations to Neural Engine;
+the five CPU-preferred operations prepare the input and process image patches.
+Depth Anything 3's built-in attention operation can run on CPU, GPU, or Neural
+Engine. With all devices allowed, the plan prefers GPU for the first attention
+block and Neural Engine for the remaining eleven.
 
-At ZipDepth 1536, `all` moves nine operations to GPU, while CPU plus Neural
-Engine restores the smaller shapes' placement proportions. Runtime trials are
-still required to compare those fixed compute choices. High anticipated
-Neural Engine placement did not produce a DA2 or DA3 latency win, and it did
-not establish a reason to remove ZipDepth context blocks.
+At ZipDepth 1536, allowing all devices assigns nine operations to GPU.
+Selecting CPU plus Neural Engine gives the same estimated proportions as the
+smaller sizes. Actual timing tests are still needed to compare those choices.
+The large estimated Neural Engine share did not make Depth Anything V2 or 3
+faster, and did not justify removing ZipDepth's scene-context components
+(StripPooling and GlobalContext).
 
-The public compute-plan value-type API does not expose per-operation tensor
-shapes or data types. Stable operation paths/output names can be correlated
-with source MIL inventories. Full generated summaries and adjacent JSON are
-available for [ZipDepth 384](apple-silicon-depth-optimization/compute-plans/zipdepth-384x384.md),
+The public Core ML API does not report each operation's array dimensions or
+number type. Its operation names and output names can be matched to the
+source MIL lists. Full summaries and adjacent JSON results are available for
+[ZipDepth 384](apple-silicon-depth-optimization/compute-plans/zipdepth-384x384.md),
 [ZipDepth 896](apple-silicon-depth-optimization/compute-plans/zipdepth-896x512.md),
 [ZipDepth 1536](apple-silicon-depth-optimization/compute-plans/zipdepth-1536x864.md),
-[DA2 448](apple-silicon-depth-optimization/compute-plans/depth-anything-v2-small-448x336.md),
-[DA3 392](apple-silicon-depth-optimization/compute-plans/depth-anything-3-small-392x392.md),
-and [DA3 518](apple-silicon-depth-optimization/compute-plans/depth-anything-3-small-518x518.md).
+[Depth Anything V2 448](apple-silicon-depth-optimization/compute-plans/depth-anything-v2-small-448x336.md),
+[Depth Anything 3 392](apple-silicon-depth-optimization/compute-plans/depth-anything-3-small-392x392.md),
+and [Depth Anything 3 518](apple-silicon-depth-optimization/compute-plans/depth-anything-3-small-518x518.md).
+
+## Appendix E: output checks
+
+These checks compare converted or changed models with their original output.
+They do not rank scene-depth accuracy between model families.
+
+For 16-bit input, Core ML checks use gradient, checkerboard, and repeatable
+random inputs with CPU plus GPU. MPSGraph checks use a fixed array of input
+values. The table gives each Core ML comparison's worst test-pattern value
+and the recorded MPSGraph result. Absolute differences are in millionths of
+one depth-output unit; normalized RMSE is in parts per million (ppm).
+
+| Model with 16-bit input | Core ML largest difference (millionths) / normalized RMSE (ppm) | MPSGraph largest difference (millionths) / normalized RMSE (ppm) | Output check |
+| --- | --- | --- | --- |
+| Depth Anything V2 448 | 5,859 / 706 | 5,859 / 601 | Passed: largest difference ≤ 20,000 millionths and normalized RMSE ≤ 2,000 ppm |
+| ZipDepth 384 | 290 / 1,662 | 244 / 840 | Passed: largest difference ≤ 500 millionths and normalized RMSE ≤ 2,000 ppm |
+| ZipDepth 896 | 397 / 921 | 305 / 767 | Passed: same ZipDepth thresholds |
+| ZipDepth 1536 | 259 / 516 | 366 / 681 | Passed: same ZipDepth thresholds |
+| ZipDepth 1920 | 305 / 576 | 397 / 682 | Passed: same ZipDepth thresholds |
+
+The Depth Anything V2 attention change produced exactly the same 16-bit output
+in the recorded Core ML and MPSGraph comparisons. Before conversion, its
+PyTorch largest difference was about 5 millionths and normalized RMSE below
+1 ppm. It replaced 24 matrix-multiplication and 12 softmax operations with
+twelve built-in attention operations (SDPA). Rebuilding the original Core ML
+image-input version also produced identical output on all three test patterns.
+Despite preserving output, the attention candidate was slower and was rejected.
+
+The Depth Anything 3 392 hardware test required cosine disagreement of at most
+1,000 ppm and MAE of at most 10,000 millionths. Cosine disagreement measures
+a difference in the overall pattern of output values; smaller is closer.
+CPU plus Neural Engine produced disagreement of 5 ppm, MAE of 9,573
+millionths, and largest difference of 63,477 millionths. Allowing all devices
+produced disagreement of 1 ppm, MAE of 3,832 millionths, and largest difference
+of 24,414 millionths. Both passed, but both were slower than CPU plus GPU.
+
+The older Depth Anything 3 conversion that removed its camera token is
+excluded. It also removed part of the model's original attention behavior
+and reached only about 93% Pearson correlation with the official output on
+the recorded example. The version preserving the camera token remains the
+reference model.
+
+For technical reproduction, MPSGraph inputs use NCHW layout, separate RGB
+channels, and values from 0 to 255. FP16 or FP32 describes how those input
+numbers are stored. Scaling and model normalization remain in the converted
+model; output is FP16 at the input dimensions. The model manifest records the
+exact settings. Depth Anything V2 keeps its simplified depth-output processing.
+ZipDepth keeps its combined calculation steps and simpler image-enlargement
+method. Depth Anything 3 keeps its camera token and original attention behavior.
+These starting changes have not each had a separate speed test.
+
+## Glossary
+
+| Term | Meaning in this study |
+| --- | --- |
+| 1080p | An image 1920 pixels wide and 1080 pixels high. The “p” means progressive scanning. |
+| Core ML | Apple's framework for running models on supported hardware. ML means machine learning. |
+| MPSGraph | Metal Performance Shaders Graph, Apple's framework used here to run converted models on the GPU. |
+| CPU | Central processing unit: the computer's general-purpose processor. |
+| GPU | Graphics processing unit: the processor used for graphics and many parallel calculations. |
+| Neural Engine / ANE | Apple's Neural Engine, a processor designed for machine-learning work. ANE means Apple Neural Engine. |
+| NPU | Neural processing unit. “Base NPU” is part of the tested ZipDepth model's name. |
+| FP16 / FP32 | Floating-point numbers stored in 16 or 32 bits. Here the labels identify the MPSGraph input type; both versions already use 16-bit model calculations and output. |
+| DA2 / DA3 | File/report abbreviations for Depth Anything V2 Small and Depth Anything 3 Small. |
+| V2 | Version 2, as used in the name Depth Anything V2. |
+| M1 Max | The Apple processor in the Mac Studio used for these tests. |
+| RGB | Red, green, and blue: the three image color channels. |
+| NCHW | Array order: N is batch size, C is color channels, H is height, and W is width. |
+| fps | Frames per second. Here it describes the displayed frame rate unless otherwise stated. |
+| ms / s | Milliseconds / seconds. One millisecond is one thousandth of a second. |
+| Median / typical time | The middle reading: half the readings are at or below it. |
+| p90 / p99 | The 90th / 99th percentile: 90% / 99% of recorded readings are at or below that value. |
+| ppm | Parts per million: a way to show very small differences using whole numbers. |
+| MAE | Mean absolute error: the average size of a difference between matching output values. |
+| RMSE | Root mean square error: a difference score that gives larger errors more weight. “Normalized” means divided by the reference output scale used by the test. |
+| IoU | Intersection over union: an overlap score between a predicted foreground mask and a reference mask. |
+| SDPA | Scaled dot-product attention: a calculation used by the model to weigh related image information. |
+| API | Application programming interface: the public methods a program uses to request information or work from a framework. |
+| JSON | JavaScript Object Notation: the structured text format used for saved results and model details. |
+| MIL | Model Intermediate Language: Core ML Tools' internal description of model operations. |
+| PIL | Python Imaging Library; the tests use its image interface through Pillow. |
+| MIT license | A permissive software license named for the Massachusetts Institute of Technology. |
+| iOS | Apple's operating system for iPhone. Its version labels also identify Core ML model formats that macOS supports. |
+| CLEAN / LOADED | Labels in saved filenames: CLEAN means depth-only; LOADED means faces and foreground processing are also active. |
+| MESS | The application used to combine depth, face detection, foreground extraction, and image effects in these tests. |
+| MPSMediaPipe | The face-processing implementation named in the saved logs; “MPS” refers to Metal Performance Shaders. |
+| Camera token | A learned extra input in Depth Anything 3. The retained conversion keeps it and the model's original attention behavior. |
+| Tensor / planar input | A numeric array; “planar” means each color channel is stored separately. |
+| Softmax | A calculation that turns a set of model scores into weights that add up to one. |
+| Checksum | A file fingerprint used to check that the expected file or version is being used. |
+| README | The repository's introductory document; its name means “read me.” |
+| Input buffer | Temporary memory holding the image values that the model will read. |
+| Foreground mask | An image marking which pixels belong to the foreground subject. |
+| Pearson correlation | A score for how two sets of output values vary together; it does not measure whether depth is accurate in the real scene. |
+| Normalization | Adjusting values to the scale or distribution expected by a model step. |
