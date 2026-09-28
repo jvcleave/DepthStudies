@@ -63,6 +63,28 @@ run ended normally with zero dropped events, recorded no foreground or face
 timing, and linked a valid 1920 x 1080 snapshot. Timing values are
 `median / p90 / p99`.
 
+#### Top performers
+
+The winner for each model and input shape is the backend with the lowest median
+complete depth-source latency. Latency is rounded to one decimal place. The
+macOS column gives the supported MESS app target for the selected artifact;
+all captures were measured on macOS 27. The [compatibility note](realtime-depth-macos27/compatibility.md)
+separates model declarations, graph targets, and tested runtime versions.
+
+| Variant | Backend | Minimum macOS target | Latency | Example |
+| --- | --- | ---: | ---: | --- |
+| [Depth Anything V2 448 x 336](realtime-depth-macos27/captures/DA2_448x336_MPSGRAPH_FP32_CLEAN) | MPSGraph FP32 | 27+ | 15.4 ms | <img src="../images/examples/da2-448x336-mpsgraph-fp32-clean.png" width="240" alt="Depth Anything V2 448 x 336 MPSGraph FP32"> |
+| [Depth Anything 3 Small 392 x 392](realtime-depth-macos27/captures/DA3_392x392_MPSGRAPH_FP32_CLEAN) | MPSGraph FP32 | 27+ | 15.5 ms | <img src="../images/examples/da3-392x392-mpsgraph-fp32-clean.png" width="240" alt="Depth Anything 3 Small 392 x 392 MPSGraph FP32"> |
+| [Depth Anything 3 Small 518 x 518](realtime-depth-macos27/captures/DA3_518x518_COREML_CLEAN) | Core ML | 15+ | 48.6 ms | <img src="../images/examples/da3-518x518-coreml-clean.png" width="240" alt="Depth Anything 3 Small 518 x 518 Core ML"> |
+| [ZipDepth 384 x 384](realtime-depth-macos27/captures/ZIP_384x384_MPSGRAPH_FP32_CLEAN) | MPSGraph FP32 | 27+ | 5.8 ms | <img src="../images/examples/zipdepth-384x384-mpsgraph-fp32-clean.png" width="240" alt="ZipDepth 384 x 384 MPSGraph FP32"> |
+| [ZipDepth 512 x 512](realtime-depth-macos27/captures/ZIP_512x512_MPSGRAPH_FP32_CLEAN) | MPSGraph FP32 | 27+ | 7.8 ms | <img src="../images/examples/zipdepth-512x512-mpsgraph-fp32-clean.png" width="240" alt="ZipDepth 512 x 512 MPSGraph FP32"> |
+| [ZipDepth 672 x 384](realtime-depth-macos27/captures/ZIP_672x384_MPSGRAPH_FP32_CLEAN) | MPSGraph FP32 | 27+ | 8.3 ms | <img src="../images/examples/zipdepth-672x384-mpsgraph-fp32-clean.png" width="240" alt="ZipDepth 672 x 384 MPSGraph FP32"> |
+| [ZipDepth 896 x 512](realtime-depth-macos27/captures/ZIP_896x512_COREML_CLEAN) | Core ML | 15+ | 10.9 ms | <img src="../images/examples/zipdepth-896x512-coreml-clean.png" width="240" alt="ZipDepth 896 x 512 Core ML"> |
+| [ZipDepth 1536 x 864](realtime-depth-macos27/captures/ZIP_1536x864_MPSGRAPH_FP16_CLEAN) | MPSGraph FP16 | 27+ | 15.3 ms | <img src="../images/examples/zipdepth-1536x864-mpsgraph-fp16-clean.png" width="240" alt="ZipDepth 1536 x 864 MPSGraph FP16"> |
+| [ZipDepth 1920 x 1088](realtime-depth-macos27/captures/ZIP_1920x1088_MPSGRAPH_FP32_CLEAN) | MPSGraph FP32 | 27+ | 44.3 ms | <img src="../images/examples/zipdepth-1920x1088-mpsgraph-fp32-clean.png" width="240" alt="ZipDepth 1920 x 1088 MPSGraph FP32"> |
+
+#### Complete results
+
 | Capture | Shape | Backend / input | Duration / n | Model latency | Complete depth-source latency | Presentation median | Example |
 | --- | ---: | --- | ---: | ---: | ---: | ---: | --- |
 | [DA2 448](realtime-depth-macos27/captures/DA2_448x336_COREML_CLEAN) | 448 x 336 | Core ML image | 32.60 s / 33 | 15.93 / 16.32 / 16.61 ms | 16.68 / 17.95 / 21.26 ms | 59.996 fps | [PNG](../images/examples/da2-448x336-coreml-clean.png) |
