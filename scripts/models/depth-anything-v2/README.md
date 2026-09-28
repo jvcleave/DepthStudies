@@ -12,6 +12,24 @@ without modifying the pinned source checkout. The baseline build remains the
 default. The SDPA package uses the iOS 18 Core ML operator set, corresponding to
 macOS 15, so conversion can retain the native attention operation.
 
+`build_tensor_f16.sh` keeps classic decomposed attention and creates the
+graph-specific `DepthAnythingV2SmallRealtimeTensorF16` experiment. Its input is
+a planar FP16 RGB tensor in the 0...255 range; pixel scaling and ImageNet
+normalization remain inside the graph. This isolates input-buffer traffic from
+the rejected SDPA experiment.
+
+Validate the FP16-input package against the current image-input baseline:
+
+```sh
+build/depth-anything-v2/venv/bin/python \
+  scripts/models/depth-anything-v2/validate_tensor_f16.py \
+  --baseline build/depth-anything-v2/coreml/DepthAnythingV2SmallRealtime.mlpackage \
+  --candidate build/depth-anything-v2-tensor-f16/coreml/DepthAnythingV2SmallRealtimeTensorF16.mlpackage \
+  --warmups 20 \
+  --iterations 100 \
+  --output build/depth-anything-v2-tensor-f16/coreml-comparison.json
+```
+
 After building both variants, validate their Core ML outputs on the same
 deterministic RGB fixtures:
 

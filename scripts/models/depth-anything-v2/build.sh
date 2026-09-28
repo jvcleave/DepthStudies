@@ -17,15 +17,23 @@ coreml_dir="$build_root/coreml"
 graph_dir="$build_root/mpsgraph"
 download_dir="$build_root/downloads"
 attention_implementation="${DA2_ATTENTION_IMPLEMENTATION:-decomposed}"
-case "$attention_implementation" in
-    decomposed)
+input_representation="${DA2_INPUT_REPRESENTATION:-image-f32}"
+case "$attention_implementation:$input_representation" in
+    decomposed:image-f32)
         model_name=DepthAnythingV2SmallRealtime
         ;;
-    sdpa)
+    sdpa:image-f32)
         model_name=DepthAnythingV2SmallRealtimeSDPA
         ;;
+    decomposed:tensor-f16)
+        model_name=DepthAnythingV2SmallRealtimeTensorF16
+        ;;
+    sdpa:tensor-f16)
+        echo "combined DA2 SDPA and tensor-FP16 export is outside this experiment" >&2
+        exit 64
+        ;;
     *)
-        echo "DA2_ATTENTION_IMPLEMENTATION must be decomposed or sdpa" >&2
+        echo "DA2 attention/input combination is invalid" >&2
         exit 64
         ;;
 esac
@@ -115,6 +123,7 @@ PYTHONPATH="$source_root" "$venv_dir/bin/python" "$script_dir/export_coreml.py" 
     --pos-embed-interpolation bilinear \
     --model-semantics optimized \
     --attention-implementation "$attention_implementation" \
+    --input-representation "$input_representation" \
     --output "$model_path"
 
 "$repo_root/scripts/common/convert_coreml_to_mpsgraph.sh" \

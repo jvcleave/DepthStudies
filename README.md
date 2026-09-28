@@ -29,6 +29,9 @@ documents the first graph-specific candidate and the remaining realtime gate.
 The [DA2 native SDPA study](studies/apple-silicon-depth-optimization/da2-sdpa-findings.md)
 records a conversion-correct but slower fused-attention experiment and keeps
 classic decomposed attention as the selected implementation.
+The [DA2 FP16 input study](studies/apple-silicon-depth-optimization/da2-fp16-input-findings.md)
+halves graph-input bytes with tied isolated execution and defines the remaining
+complete MESS comparison.
 
 Each model family has its own entry point. Depth Anything V2 carries its fixed
 source patch and exporter, DA3 pins the tagged conversion fork and its numerical

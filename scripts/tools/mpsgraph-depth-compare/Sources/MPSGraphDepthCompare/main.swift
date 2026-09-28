@@ -58,6 +58,8 @@ private struct Arguments
     let iterations: Int
     let baselineInputDataType: InputDataType
     let candidateInputDataType: InputDataType
+    let maximumNormalizedRMSE: Double
+    let maximumAbsoluteError: Double
 
     static func parse(_ values: [String]) throws -> Arguments
     {
@@ -72,6 +74,8 @@ private struct Arguments
             "--iterations",
             "--baseline-input-data-type",
             "--candidate-input-data-type",
+            "--maximum-normalized-rmse",
+            "--maximum-absolute-error",
         ]
         var index = 0
         while index < values.count
@@ -105,8 +109,15 @@ private struct Arguments
             strings["--candidate-input-data-type"] ?? "float16",
             option: "--candidate-input-data-type"
         )
+        let maximumNormalizedRMSE = strings["--maximum-normalized-rmse"]
+            .flatMap(Double.init) ?? 0.002
+        let maximumAbsoluteError = strings["--maximum-absolute-error"]
+            .flatMap(Double.init) ?? 0.0005
         guard width > 0, height > 0, warmups >= 0, iterations > 0
         else { throw CompareError.usage("Dimensions and iterations must be positive") }
+        guard maximumNormalizedRMSE.isFinite, maximumNormalizedRMSE > 0,
+              maximumAbsoluteError.isFinite, maximumAbsoluteError > 0
+        else { throw CompareError.usage("Quality thresholds must be finite and positive") }
 
         let workingDirectory = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
         let baselineURL = URL(fileURLWithPath: baseline, relativeTo: workingDirectory).standardizedFileURL
@@ -126,7 +137,9 @@ private struct Arguments
             warmups: warmups,
             iterations: iterations,
             baselineInputDataType: baselineInputDataType,
-            candidateInputDataType: candidateInputDataType
+            candidateInputDataType: candidateInputDataType,
+            maximumNormalizedRMSE: maximumNormalizedRMSE,
+            maximumAbsoluteError: maximumAbsoluteError
         )
     }
 
@@ -149,6 +162,8 @@ private struct Arguments
         --output /path/to/report.json \\
         [--baseline-input-data-type float32] \\
         [--candidate-input-data-type float16] \\
+        [--maximum-normalized-rmse 0.002] \\
+        [--maximum-absolute-error 0.0005] \\
         [--warmups 5] [--iterations 30]
     """
 }
@@ -195,6 +210,8 @@ private struct TimingSummary: Codable
 private struct Quality: Codable
 {
     let passed: Bool
+    let maximumAllowedNormalizedRootMeanSquareError: Double
+    let maximumAllowedAbsoluteError: Double
     let meanAbsoluteError: Double
     let maximumAbsoluteError: Double
     let rootMeanSquareError: Double
@@ -378,7 +395,12 @@ private enum MPSGraphDepthCompareMain
             let pixelCount = arguments.width * arguments.height
             let baselineOutput = baseline.output(count: pixelCount)
             let candidateOutput = candidate.output(count: pixelCount)
-            let quality = compare(baselineOutput, candidateOutput)
+            let quality = compare(
+                baselineOutput,
+                candidateOutput,
+                maximumNormalizedRMSE: arguments.maximumNormalizedRMSE,
+                allowedMaximumAbsoluteError: arguments.maximumAbsoluteError
+            )
             let report = Report(
                 schemaVersion: 1,
                 generatedAt: ISO8601DateFormatter().string(from: Date()),
@@ -464,7 +486,12 @@ private func percentile(_ sorted: [Double], _ fraction: Double) -> Double
     return sorted[lower] + (sorted[upper] - sorted[lower]) * interpolation
 }
 
-private func compare(_ baseline: [Float], _ candidate: [Float]) -> Quality
+private func compare(
+    _ baseline: [Float],
+    _ candidate: [Float],
+    maximumNormalizedRMSE: Double,
+    allowedMaximumAbsoluteError: Double
+) -> Quality
 {
     var absoluteSum = 0.0
     var squareSum = 0.0
@@ -490,7 +517,10 @@ private func compare(_ baseline: [Float], _ candidate: [Float]) -> Quality
     let referenceRange = max(baselineMaximum - baselineMinimum, 1e-12)
     let psnr = 20 * log10(referenceRange / max(rmse, 1e-12))
     return Quality(
-        passed: normalizedRMSE <= 0.002 && maximumAbsoluteError <= 0.0005,
+        passed: normalizedRMSE <= maximumNormalizedRMSE
+            && maximumAbsoluteError <= allowedMaximumAbsoluteError,
+        maximumAllowedNormalizedRootMeanSquareError: maximumNormalizedRMSE,
+        maximumAllowedAbsoluteError: allowedMaximumAbsoluteError,
         meanAbsoluteError: absoluteSum / count,
         maximumAbsoluteError: maximumAbsoluteError,
         rootMeanSquareError: rmse,

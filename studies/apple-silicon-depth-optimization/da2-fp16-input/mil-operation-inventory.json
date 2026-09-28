@@ -1,0 +1,126 @@
+{
+  "models": {
+    "baseline": {
+      "leading_nonconstant_operations": [
+        {
+          "output": "image__scaled__",
+          "type": "mul"
+        },
+        {
+          "output": "image_to_fp16",
+          "type": "cast"
+        },
+        {
+          "output": "var_6_cast_fp16",
+          "type": "sub"
+        },
+        {
+          "output": "_inversed_x_1_cast_fp16",
+          "type": "mul"
+        },
+        {
+          "output": "x_3_cast_fp16",
+          "type": "conv"
+        },
+        {
+          "output": "var_100_cast_fp16",
+          "type": "reshape"
+        },
+        {
+          "output": "x_5_cast_fp16",
+          "type": "transpose"
+        },
+        {
+          "output": "x_7_cast_fp16",
+          "type": "concat"
+        }
+      ],
+      "operation_counts": {
+        "add": 35,
+        "cast": 1,
+        "concat": 2,
+        "const": 744,
+        "conv": 31,
+        "conv_transpose": 2,
+        "gelu": 12,
+        "identity": 1,
+        "layer_norm": 28,
+        "linear": 48,
+        "matmul": 24,
+        "mul": 38,
+        "relu": 16,
+        "reshape": 30,
+        "slice_by_index": 40,
+        "softmax": 12,
+        "sub": 1,
+        "transpose": 30,
+        "upsample_bilinear": 6
+      },
+      "opsets": [
+        "CoreML6"
+      ],
+      "package": "DepthAnythingV2SmallRealtime.mlpackage"
+    },
+    "candidate": {
+      "leading_nonconstant_operations": [
+        {
+          "output": "image_cast_fp16",
+          "type": "mul"
+        },
+        {
+          "output": "var_33_cast_fp16",
+          "type": "sub"
+        },
+        {
+          "output": "_inversed_x_1_cast_fp16",
+          "type": "mul"
+        },
+        {
+          "output": "x_3_cast_fp16",
+          "type": "conv"
+        },
+        {
+          "output": "var_102_cast_fp16",
+          "type": "reshape"
+        },
+        {
+          "output": "x_5_cast_fp16",
+          "type": "transpose"
+        },
+        {
+          "output": "x_7_cast_fp16",
+          "type": "concat"
+        },
+        {
+          "output": "patch_pos_embed_3_cast_fp16",
+          "type": "upsample_bilinear"
+        }
+      ],
+      "operation_counts": {
+        "add": 35,
+        "concat": 2,
+        "const": 743,
+        "conv": 31,
+        "conv_transpose": 2,
+        "gelu": 12,
+        "identity": 1,
+        "layer_norm": 28,
+        "linear": 48,
+        "matmul": 24,
+        "mul": 38,
+        "relu": 16,
+        "reshape": 30,
+        "slice_by_index": 40,
+        "softmax": 12,
+        "sub": 1,
+        "transpose": 30,
+        "upsample_bilinear": 6
+      },
+      "opsets": [
+        "CoreML6"
+      ],
+      "package": "DepthAnythingV2SmallRealtimeTensorF16.mlpackage"
+    }
+  },
+  "schema_version": 1
+}

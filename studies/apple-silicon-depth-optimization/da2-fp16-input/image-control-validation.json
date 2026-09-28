@@ -1,0 +1,97 @@
+{
+  "baseline": "DepthAnythingV2SmallRealtime.mlpackage",
+  "candidate": "DepthAnythingV2SmallRealtime.mlpackage",
+  "compute_units": "CPU_AND_GPU",
+  "coremltools_version": "9.0",
+  "generated_at": "2026-09-28T07:48:44.354346+00:00",
+  "host": {
+    "machine": "arm64",
+    "macos": "27.0"
+  },
+  "input_shape": [
+    1,
+    3,
+    336,
+    448
+  ],
+  "passed": true,
+  "samples": [
+    {
+      "baseline_range": [
+        0.9560546875,
+        2.490234375
+      ],
+      "candidate_range": [
+        0.9560546875,
+        2.490234375
+      ],
+      "mae": 0.0,
+      "maximum_absolute_error": 0.0,
+      "name": "gradient",
+      "normalized_rmse": 0.0,
+      "passed": true,
+      "psnr_db": 243.71752456800323,
+      "rmse": 0.0
+    },
+    {
+      "baseline_range": [
+        1.9755859375,
+        2.681640625
+      ],
+      "candidate_range": [
+        1.9755859375,
+        2.681640625
+      ],
+      "mae": 0.0,
+      "maximum_absolute_error": 0.0,
+      "name": "checker",
+      "normalized_rmse": 0.0,
+      "passed": true,
+      "psnr_db": 236.9767668130944,
+      "rmse": 0.0
+    },
+    {
+      "baseline_range": [
+        2.13671875,
+        3.646484375
+      ],
+      "candidate_range": [
+        2.13671875,
+        3.646484375
+      ],
+      "mae": 0.0,
+      "maximum_absolute_error": 0.0,
+      "name": "random-seed-0",
+      "normalized_rmse": 0.0,
+      "passed": true,
+      "psnr_db": 243.5781906588499,
+      "rmse": 0.0
+    }
+  ],
+  "schema_version": 1,
+  "thresholds": {
+    "maximum_absolute_error": 0.02,
+    "maximum_normalized_rmse": 0.002
+  },
+  "timing": {
+    "baseline_milliseconds": {
+      "maximum": 15.665959,
+      "mean": 15.665959,
+      "median": 15.665959,
+      "minimum": 15.665959,
+      "p90": 15.665959,
+      "p99": 15.665959
+    },
+    "candidate_milliseconds": {
+      "maximum": 15.547,
+      "mean": 15.547,
+      "median": 15.547,
+      "minimum": 15.547,
+      "p90": 15.547,
+      "p99": 15.547
+    },
+    "iterations": 1,
+    "scope": "synchronous Core ML prediction with a reused PIL image",
+    "warmups": 0
+  }
+}

@@ -5,6 +5,7 @@ from collections import Counter
 from pathlib import Path
 
 import coremltools as ct
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -37,6 +38,21 @@ class CoreMLDepthAnythingV2(nn.Module):
         image = (image - self.mean) / self.std
         depth = self.model(image)
         return depth.unsqueeze(1)
+
+
+class NormalizePixelTensor(nn.Module):
+    """Keep 0...255 scaling inside the graph-specific tensor model."""
+
+    def __init__(self, model: nn.Module):
+        super().__init__()
+        self.model = model
+        self.register_buffer(
+            "pixel_scale",
+            torch.tensor(1.0 / 255.0, dtype=torch.float32),
+        )
+
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
+        return self.model(image * self.pixel_scale)
 
 
 def stock_depth_head_forward(
@@ -170,6 +186,15 @@ def parse_args() -> argparse.Namespace:
         choices=["decomposed", "sdpa"],
         help="Keep the source attention sequence or replace it in memory with native SDPA.",
     )
+    parser.add_argument(
+        "--input-representation",
+        default="image-f32",
+        choices=["image-f32", "tensor-f16"],
+        help=(
+            "Core ML input contract. image-f32 preserves the deployable image package; "
+            "tensor-f16 creates the graph-specific 0...255 planar tensor."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -300,6 +325,8 @@ def main() -> None:
 
     if args.width % 14 != 0 or args.height % 14 != 0:
         raise ValueError("Width and height must both be multiples of 14.")
+    if args.attention_implementation == "sdpa" and args.input_representation == "tensor-f16":
+        raise ValueError("Combined DA2 SDPA and tensor-FP16 export is outside this experiment")
 
     model = load_model(args.encoder, args.checkpoint)
     if args.pos_embed_interpolation == "precomputed-bicubic":
@@ -313,13 +340,64 @@ def main() -> None:
     )
 
     torch.manual_seed(0)
-    example_input = torch.rand(1, 3, args.height, args.width, dtype=torch.float32)
+    if args.input_representation == "image-f32":
+        conversion_model = wrapped_model
+        example_input = torch.rand(1, 3, args.height, args.width, dtype=torch.float32)
+        coreml_inputs = [
+            ct.ImageType(
+                name="image",
+                shape=example_input.shape,
+                scale=1.0 / 255.0,
+                bias=[0.0, 0.0, 0.0],
+                color_layout=ct.colorlayout.RGB,
+                channel_first=True,
+            )
+        ]
+        coreml_outputs = [
+            ct.ImageType(
+                name="depth",
+                color_layout=ct.colorlayout.GRAYSCALE_FLOAT16,
+            )
+        ]
+    else:
+        example_input = torch.randint(
+            0,
+            256,
+            (1, 3, args.height, args.width),
+            dtype=torch.int32,
+        ).to(torch.float32)
+        conversion_model = NormalizePixelTensor(wrapped_model).eval()
+        with torch.no_grad():
+            direct_output = wrapped_model(example_input * (1.0 / 255.0))
+            tensor_wrapper_output = conversion_model(example_input)
+        wrapper_difference = direct_output - tensor_wrapper_output
+        wrapper_maximum_absolute_error = wrapper_difference.abs().max().item()
+        print(
+            "PyTorch tensor-wrapper validation: "
+            f"max_abs={wrapper_maximum_absolute_error:.9f}"
+        )
+        if wrapper_maximum_absolute_error > 1e-6:
+            raise ValueError("DA2 tensor wrapper exceeded the PyTorch equivalence threshold")
+        coreml_inputs = [
+            ct.TensorType(
+                name="image",
+                shape=example_input.shape,
+                dtype=np.float16,
+            )
+        ]
+        coreml_outputs = [
+            ct.TensorType(
+                name="depth",
+                dtype=np.float16,
+            )
+        ]
+
     with torch.no_grad():
-        reference_output = wrapped_model(example_input)
+        reference_output = conversion_model(example_input)
     if args.attention_implementation == "sdpa":
         attention_count = install_sdpa_attention(model)
         with torch.no_grad():
-            candidate_output = wrapped_model(example_input)
+            candidate_output = conversion_model(example_input)
         difference = reference_output - candidate_output
         maximum_absolute_error = difference.abs().max().item()
         root_mean_square_error = difference.square().mean().sqrt().item()
@@ -333,7 +411,14 @@ def main() -> None:
         )
         if maximum_absolute_error > 1e-5 or normalized_root_mean_square_error > 1e-5:
             raise ValueError("DA2 SDPA rewrite exceeded the PyTorch equivalence threshold")
-    traced_model = torch.jit.trace(wrapped_model, example_input)
+    expected_output_shape = (1, 1, args.height, args.width)
+    if tuple(reference_output.shape) != expected_output_shape:
+        raise ValueError(
+            f"Expected output shape {expected_output_shape}, got {tuple(reference_output.shape)}"
+        )
+    if not torch.isfinite(reference_output).all():
+        raise ValueError("DA2 produced nonfinite output before conversion")
+    traced_model = torch.jit.trace(conversion_model, example_input)
 
     compute_precision = (
         ct.precision.FLOAT16 if args.compute_precision == "float16" else ct.precision.FLOAT32
@@ -349,34 +434,26 @@ def main() -> None:
         convert_to="mlprogram",
         compute_precision=compute_precision,
         minimum_deployment_target=minimum_deployment_target,
-        inputs=[
-            ct.ImageType(
-                name="image",
-                shape=example_input.shape,
-                scale=1.0 / 255.0,
-                bias=[0.0, 0.0, 0.0],
-                color_layout=ct.colorlayout.RGB,
-                channel_first=True,
-            )
-        ],
-        outputs=[
-            ct.ImageType(
-                name="depth",
-                color_layout=ct.colorlayout.GRAYSCALE_FLOAT16,
-            )
-        ],
+        inputs=coreml_inputs,
+        outputs=coreml_outputs,
     )
 
     mlmodel.short_description = (
         f"Custom Depth Anything V2 {args.encoder} export for MessApp realtime testing."
     )
-    mlmodel.input_description["image"] = (
-        "RGB image input scaled to [0, 1] by Core ML, then normalized with ImageNet mean/std."
-    )
+    if args.input_representation == "image-f32":
+        mlmodel.input_description["image"] = (
+            "RGB image scaled to [0, 1] by Core ML, then normalized with ImageNet mean/std."
+        )
+    else:
+        mlmodel.input_description["image"] = (
+            "Planar float16 RGB tensor in 0...255; scaling and ImageNet normalization are in the graph."
+        )
     mlmodel.output_description["depth"] = "Single-channel half-float relative depth map."
     mlmodel.user_defined_metadata["DA2AttentionImplementation"] = (
         args.attention_implementation
     )
+    mlmodel.user_defined_metadata["DA2InputRepresentation"] = args.input_representation
 
     operation_counts = operation_inventory(mlmodel)
     if args.attention_implementation == "sdpa":

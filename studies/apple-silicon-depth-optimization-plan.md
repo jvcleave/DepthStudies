@@ -8,6 +8,8 @@ show high Neural Engine placement. Milestone 3 passed isolated validation and
 has an optional MESS engine; its [realtime comparison is pending](apple-silicon-depth-optimization/fp16-input-findings.md).
 Milestone 4 preserved native DA2 SDPA and exact FP16 output, but rejected the
 candidate because it was slower in paired Core ML and MPSGraph measurements.
+Milestone 4A has an isolated DA2 FP16-input candidate with half the input bytes
+and tied graph execution; its complete MESS measurement is pending.
 
 ## Objective
 
@@ -273,18 +275,18 @@ Depth Anything families without changing their attention implementations.
 
 ### Actionable steps
 
-- [ ] Start with DA2 448 x 336. Add a graph-specific FP16 planar tensor input
+- [x] Start with DA2 448 x 336. Add a graph-specific FP16 planar tensor input
   while preserving 0...255 RGB ingress and the existing ImageNet normalization.
-- [ ] Validate the FP16-input Core ML export against the current image-input
+- [x] Validate the FP16-input Core ML export against the current image-input
   package on deterministic fixtures, then compare the two graph packages.
-- [ ] Confirm that MESS can reuse the existing FP16 planar Metal pack path
+- [x] Confirm that MESS can reuse the existing FP16 planar Metal pack path
   without adding a family-specific copy or synchronization point.
 - [ ] Measure input bytes, graph-only median/p90/p99, and complete depth-source
-  time before exposing an optional app variant.
+  time. Input bytes and graph timing are complete; the app capture remains.
 - [ ] Repeat the same isolated process for DA3 392 x 392 first. Try 518 x 518
   only if the smaller package passes because the current 518 MPSGraph baseline
   is already substantially slower than Core ML.
-- [ ] Keep DA2 classic attention and DA3's existing native SDPA fixed so the
+- [x] Keep DA2 classic attention and DA3's existing native SDPA fixed so the
   input contract is the only experimental variable.
 
 ### Gate
@@ -292,6 +294,15 @@ Depth Anything families without changing their attention implementations.
 Advance each family independently only when numerical validation passes and
 the complete MESS depth-source measurement improves. Do not infer a DA3 win
 from DA2 or from the earlier ZipDepth result.
+
+### Current DA2 result
+
+The candidate removes the initial FP32-to-FP16 cast, halves input-buffer bytes
+from 1,806,336 to 903,168, and passes the numerical gate. MPSGraph execution was
+effectively tied across three paired runs. An optional MESS engine is available
+to measure the Metal pack and complete depth-source path; the existing DA2
+default remains unchanged. See the
+[DA2 FP16-input findings](apple-silicon-depth-optimization/da2-fp16-input-findings.md).
 
 ## Milestone 5: Controlled MESS trials
 
