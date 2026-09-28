@@ -2,7 +2,7 @@
 
 - Updated: 2026-09-28 04:55 EDT
 - Owning repository: `/Users/jvcleave/Documents/WORK_IN_PROGRESS/GITHUB/PUBLIC/DepthStudies`
-- Branch and HEAD: `main`; completed milestone is pending commit atop `3b4d1de`
+- Branch and milestone commit: `main` at `b6f44a3`
 
 ## Objective
 
@@ -28,9 +28,9 @@ change an application default during this milestone.
 
 ## Repository State
 
-DepthStudies was clean at `3b4d1de` before this milestone. The new harness, raw
-reports, findings, workflow documentation, and updated test checklist are ready
-to commit. The three trials all selected CPU plus GPU as the fastest route.
+The harness, three raw reports, findings, workflow documentation, and updated
+test checklist were committed and pushed as `b6f44a3`. The three trials all
+selected CPU plus GPU as the fastest route.
 
 ## Decisions and Constraints to Preserve
 
