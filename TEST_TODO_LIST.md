@@ -198,7 +198,7 @@ so it completes B01 under the 20-second test contract.
 ### ZipDepth Core ML controls
 
 - [x] **B05** — `DEPTH ZIP 384 CORE ML`, CLEAN.
-- [ ] **B06** — `DEPTH ZIP 896 CORE ML`, CLEAN.
+- [x] **B06** — `DEPTH ZIP 896 CORE ML`, CLEAN.
 - [ ] **B07** — `DEPTH ZIP 1536 CORE ML`, CLEAN.
 - [x] **B08** — `DEPTH ZIP 1080 CORE ML`, CLEAN.
 
@@ -210,7 +210,7 @@ these as application-policy measurements, not fixed-compute-unit benchmarks.
 ### ZipDepth resolution sweep
 
 - [x] **B09** — `DEPTH ZIP 512 GRAPH`, CLEAN.
-- [ ] **B10** — `DEPTH ZIP 672 GRAPH`, CLEAN.
+- [x] **B10** — `DEPTH ZIP 672 GRAPH`, CLEAN.
 - [x] **B11** — `DEPTH ZIP 512 CORE ML`, CLEAN, only if a full backend sweep is
   still useful after B09.
 - [x] **B12** — `DEPTH ZIP 672 CORE ML`, CLEAN, only if a full backend sweep is
@@ -224,10 +224,9 @@ Initial LOADED observations are saved for 512 x 512 and 672 x 384. Both held a
 60 fps presentation median, but their competing foreground time differed, so
 they do not replace B09 and B10.
 
-The CLEAN 512 MPSGraph route reduced median complete-path latency by `30.6%`
-versus its Core ML control. The 672 batch contained two Core ML captures and no
-MPSGraph capture; the duplicate was discarded, B12 is complete, and B10 remains
-open.
+The CLEAN MPSGraph routes reduced median complete-path latency by `30.6%` at
+512 x 512 and `23.5%` at 672 x 384 versus their Core ML controls. The duplicate
+672 Core ML capture was discarded.
 
 ## Batch C: representative loaded session
 

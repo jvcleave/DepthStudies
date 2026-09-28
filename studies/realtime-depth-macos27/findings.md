@@ -50,7 +50,7 @@ target macOS 27. The runtime machine remains macOS 27.
 | M05 | ZipDepth Base NPU | 384 x 384 | FP32 | macOS 27 | [Raw](captures/ZIP_384x384_MPSGRAPH_FP32_CLEAN) / [PNG](../../images/examples/zipdepth-384x384-mpsgraph-fp32-clean.png) | 5.63 ms | 5.78 ms | 6.44 ms | 59.995 fps |
 | M06 | ZipDepth Base NPU | 384 x 384 | FP16 | macOS 27 | [Raw](captures/ZIP_384x384_MPSGRAPH_FP16_CLEAN) / [PNG](../../images/examples/zipdepth-384x384-mpsgraph-fp16-clean.png) | 6.14 ms | 6.37 ms | 6.80 ms | 59.996 fps |
 | M07 | ZipDepth Base NPU | 512 x 512 | FP32 | macOS 27 | [Raw](captures/ZIP_512x512_MPSGRAPH_FP32_CLEAN) / [PNG](../../images/examples/zipdepth-512x512-mpsgraph-fp32-clean.png) | 7.67 ms | 7.84 ms | 8.49 ms | 59.991 fps |
-| M08 | ZipDepth Base NPU | 672 x 384 | FP32 | macOS 27 | Pending | — | — | — | — |
+| M08 | ZipDepth Base NPU | 672 x 384 | FP32 | macOS 27 | [Raw](captures/ZIP_672x384_MPSGRAPH_FP32_CLEAN) / [PNG](../../images/examples/zipdepth-672x384-mpsgraph-fp32-clean.png) | 8.07 ms | 8.26 ms | 8.86 ms | 59.989 fps |
 | M09 | ZipDepth Base NPU | 896 x 512 | FP32 | macOS 15 | Pending | — | — | — | — |
 | M10 | ZipDepth Base NPU | 896 x 512 | FP16 | macOS 27 | Pending | — | — | — | — |
 | M11 | ZipDepth Base NPU | 1536 x 864 | FP32 | macOS 27 | Pending | — | — | — | — |
@@ -86,12 +86,13 @@ policy; the capture does not record the device placement selected by Core ML.
 | [ZipDepth 384 Core ML](captures/ZIP_384x384_COREML_CLEAN) | 33.90 s / 34 | 7.44 / 7.62 / 7.70 ms | 8.24 / 8.62 / 11.24 ms | 60.007 fps | ![ZipDepth 384 Core ML clean snapshot](../../images/examples/zipdepth-384x384-coreml-clean.png) |
 | [ZipDepth 512 Core ML](captures/ZIP_512x512_COREML_CLEAN) | 33.85 s / 34 | 9.65 / 10.33 / 10.58 ms | 11.29 / 12.27 / 12.52 ms | 60.003 fps | ![ZipDepth 512 Core ML clean snapshot](../../images/examples/zipdepth-512x512-coreml-clean.png) |
 | [ZipDepth 672 Core ML](captures/ZIP_672x384_COREML_CLEAN) | 32.62 s / 33 | 9.69 / 10.11 / 10.61 ms | 10.80 / 11.59 / 12.26 ms | 59.996 fps | ![ZipDepth 672 Core ML clean snapshot](../../images/examples/zipdepth-672x384-coreml-clean.png) |
+| [ZipDepth 896 Core ML](captures/ZIP_896x512_COREML_CLEAN) | 34.20 s / 35 | 9.57 / 10.02 / 11.04 ms | 10.86 / 11.65 / 12.32 ms | 60.007 fps | ![ZipDepth 896 Core ML clean snapshot](../../images/examples/zipdepth-896x512-coreml-clean.png) |
 | [ZipDepth 1920 Core ML](captures/ZIP_1920x1088_COREML_CLEAN) | 33.80 s / 34 | 60.68 / 61.07 / 61.41 ms | 61.70 / 61.98 / 62.29 ms | 60.000 fps | ![ZipDepth 1920 Core ML clean snapshot](../../images/examples/zipdepth-1920x1088-coreml-clean.png) |
 
 Against the Core ML controls, MPSGraph FP32 reduced median complete-path
 latency by `8.0%` for DA2, `29.9%` for ZipDepth 384, `30.6%` for ZipDepth 512,
-and `28.3%` for ZipDepth 1920. The 672 x 384 MPSGraph control is still missing;
-two supplied 672 Core ML captures were duplicates, so only the first was kept.
+`23.5%` for ZipDepth 672, and `28.3%` for ZipDepth 1920. Two supplied 672
+Core ML captures were duplicates, so only the first was kept.
 
 For DA3, MPSGraph reduced the 392 x 392 complete-path median by `5.5%` versus
 Core ML. At 518 x 518, Core ML had a `2.4%` lower median, but MPSGraph improved
