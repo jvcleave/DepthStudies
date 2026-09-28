@@ -34,6 +34,10 @@ comparisons; the surrounding effect chain contributes to the rendered image.
 
 ![MESS frame using Depth Anything V2 Small through Core ML](images/examples/da2-coreml.png)
 
+### Depth Anything 3 Small 392 x 392 — MPSGraph
+
+![MESS frame using Depth Anything 3 Small at 392 x 392 through MPSGraph](images/examples/da3-small-392-mpsgraph.png)
+
 ### ZipDepth Base NPU — MPSGraph
 
 ![MESS frame using ZipDepth Base NPU through MPSGraph](images/examples/zipdepth.png)
