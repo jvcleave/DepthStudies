@@ -19,6 +19,10 @@ attached ZipDepth graph assets also use the macOS 27 study configuration.
 - ZipDepth Base NPU with planar-FP16 graph inputs at 384 x 384, 896 x 512,
   1536 x 864, and 1920 x 1088.
 
+The attached `mpsgraph-depth-models-macos27-v0.1.0.json` records the exact
+tensor contracts, provenance, archive sizes and digests, and per-variant runtime
+status. `SHA256SUMS.txt` verifies the manifest and all 28 model archives.
+
 ## Compatibility
 
 The `.mlpackage` and `.mpsgraphpackage` assets have different OS requirements:
