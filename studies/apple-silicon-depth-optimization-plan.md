@@ -213,12 +213,13 @@ removed from the graph is not by itself a successful result.
 
 ### Current result
 
-The isolated candidate halved input-buffer bytes and reduced paired graph-only
-median time by 27.8–36.3% across three runs. Core ML and MPSGraph output checks
-passed. See the [FP16 input findings](apple-silicon-depth-optimization/fp16-input-findings.md).
-The complete MESS depth-source gate remains open and requires the controlled
-app runs above before the candidate can become a default or advance to
-896 x 512.
+At 384 x 384, the isolated candidate halved input-buffer bytes and reduced
+paired graph-only median time by 27.8–36.3% across three runs. At 896 x 512,
+input bytes were also halved, but graph-only execution was effectively tied.
+Core ML and MPSGraph output checks passed at both shapes. See the
+[FP16 input findings](apple-silicon-depth-optimization/fp16-input-findings.md).
+The complete MESS depth-source gate remains open and requires controlled app
+runs before either candidate can become a default.
 
 ## Milestone 4: Fused attention for DA2 on the GPU
 

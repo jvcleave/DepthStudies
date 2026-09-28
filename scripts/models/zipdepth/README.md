@@ -12,17 +12,19 @@ scripts/models/zipdepth/build_1536x864.sh
 scripts/models/zipdepth/build_1920x1088.sh
 ```
 
-The graph-specific FP16-input experiment has a separate entry point:
+The graph-specific FP16-input experiments have separate entry points:
 
 ```sh
 scripts/models/zipdepth/build_384_tensor_f16.sh
+scripts/models/zipdepth/build_896x512_tensor_f16.sh
 ```
 
-It creates `ZipDepthBaseNPU384x384TensorF16`: a planar FP16 NCHW input in the
-0...255 range with pixel scaling represented inside the model. The baseline
-Core ML image-input package remains unchanged. This artifact is experimental
-until its Core ML and MPSGraph outputs and complete pack/inference/unpack time
-have been compared with the baseline.
+They create `ZipDepthBaseNPU384x384TensorF16` and
+`ZipDepthBaseNPU896x512TensorF16`: planar FP16 NCHW inputs in the 0...255 range
+with pixel scaling represented inside each model. The baseline Core ML
+image-input packages remain unchanged. These artifacts are experimental until
+their Core ML and MPSGraph outputs and complete pack/inference/unpack time have
+been compared with their corresponding baselines.
 
 Validate the Core ML candidate against the image-input baseline on three fixed
 inputs:

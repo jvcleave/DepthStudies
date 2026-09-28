@@ -18,6 +18,9 @@ swift build \
   --output /path/to/mpsgraph-comparison.json
 ```
 
+Pass the corresponding 896 x 512 baseline and FP16 packages with
+`--width 896 --height 512` to repeat the larger-model comparison.
+
 The timing includes executable encoding, submission, and GPU completion. It
 does not include texture resizing, RGB packing, depth unpacking, or upscaling,
 so an app decision still requires complete depth-source measurements.
