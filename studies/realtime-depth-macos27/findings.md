@@ -53,6 +53,18 @@ python3 scripts/summarize_capture.py \
   studies/realtime-depth-macos27/captures/DA2_MPS
 ```
 
+## Loaded FP16 input comparison
+
+Four later captures compared DA2 448 x 336 and ZipDepth 1536 x 864 with
+planar FP32 and FP16 MPSGraph inputs under active foreground and face analysis.
+DA2 was tied: FP16 changed median complete depth-source latency from `29.56 ms`
+to `29.62 ms`. ZipDepth FP16 reduced it from `29.46 ms` to `28.27 ms`, a
+`4.1%` median reduction, while the p90 remained tied near `31.8 ms`.
+
+These are single loaded captures with variable face count. The capture did not
+record the source segment, exact effect workload, memory, or delivered depth
+counts. See the [full loaded comparison and raw capture links](loaded-fp16-comparison-2026-09-28.md).
+
 ## Limits on comparison
 
 This was not a controlled replay. The DA3 capture saw zero to four faces per

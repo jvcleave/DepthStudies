@@ -1,6 +1,8 @@
 # Realtime Depth Test TODO List
 
 **Status:** Prepared on 2026-09-28 for later user-run MESS Release batches.
+The first DA2 448 x 336 and ZipDepth 1536 x 864 loaded FP32/FP16 pairs are
+logged as directional observations; the controlled checklist remains open.
 
 Use this checklist to compare the depth options already exposed by MESS and to
 track promising experiments that still need implementation. Check off a run
@@ -57,9 +59,10 @@ Summarize a capture with:
 python3 scripts/summarize_capture.py /absolute/path/to/capture
 ```
 
-The current summarizer reports sampled medians. Before the final batch, extend
-it to print the configuration event, p90/p99, missing metrics without failing,
-and the number of usable samples.
+The summarizer prints the configuration event, capture completion state,
+dropped-event count, usable sample count, median and tail depth latency,
+presentation rate, and available foreground and face context. Missing metrics
+are reported without failing.
 
 ## Workload definitions
 
@@ -176,6 +179,13 @@ Choose finalists only after reviewing Batches A and B.
 
 Keep the foreground, person-segmentation, and face settings identical across
 every C run. Record their sampled timing fields as contention context.
+
+Four initial LOADED observations were saved on 2026-09-28: DA2 448 x 336 FP32
+and FP16, plus ZipDepth 1536 x 864 FP32 and FP16. DA2 was tied, while ZipDepth
+FP16 reduced median complete depth-source latency by `4.1%` with a tied p90.
+The C items remain unchecked because the captures lack a matched visual frame,
+source/effect identity, and working-set memory. See the
+[loaded comparison](studies/realtime-depth-macos27/loaded-fp16-comparison-2026-09-28.md).
 
 ## Experiments that are not app buttons yet
 

@@ -1,8 +1,8 @@
 # Depth Anything V2 FP16 MPSGraph Input Findings
 
 **Status:** Isolated validation passed on 2026-09-28. Graph execution was tied,
-the input buffer was halved, and an optional MESS `DA2 F16` engine is available
-for the complete depth-source comparison.
+the input buffer was halved, and the first loaded MESS capture pair was also
+tied. A controlled clean comparison remains pending.
 
 ## Change
 
@@ -59,6 +59,18 @@ packing, depth unpacking, and output upscale.
 Graph execution is effectively tied. The candidate's remaining hypothesis is
 lower Metal pack cost and input-buffer traffic in the complete MESS path.
 
+## Initial loaded MESS comparison
+
+A user-run pair with active foreground and face analysis measured `29.56 ms`
+median complete depth-source latency for FP32 input and `29.62 ms` for FP16.
+Model medians were `29.19 ms` and `29.37 ms`, respectively, while median
+presentation was `57.88 fps` and `57.91 fps`. The candidate did not demonstrate
+an application-level speed improvement in this pair.
+
+Both captures ran longer than 34 seconds, ended normally, and dropped no log
+events. They did not record the exact source segment or effect workload, and
+face count varied. See the [full comparison and raw captures](../realtime-depth-macos27/loaded-fp16-comparison-2026-09-28.md).
+
 ## Core ML timing and compute plan
 
 The tensor-input package was 13.8–14.0% slower by median in the Python Core ML
@@ -89,8 +101,8 @@ for separate app launches:
 
 1. Run `DEPTH V2 GRAPH` without competing foreground or face analysis.
 2. Run `DEPTH DA2 F16 GRAPH` with the same unloaded configuration.
-3. Repeat both with the normal foreground-mask and face workload if that is a
-   representative session.
+3. Repeat both with the normal foreground-mask and face workload if a
+   controlled confirmation of the initial tied loaded pair is needed.
 4. Let warmup finish and capture at least 30 seconds per run.
 5. Compare median/p90 depth model time, complete depth-source time, delivered
    depth completions, presentation rate, superseded requests, and working-set

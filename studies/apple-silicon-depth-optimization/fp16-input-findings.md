@@ -2,8 +2,9 @@
 
 **Status:** Isolated validation passed at 384 x 384, 896 x 512, 1536 x 864, and
 1920 x 1088 on 2026-09-28. The optional MESS variants build successfully. An
-initial user-run 896 x 512 MESS comparison reported a substantial improvement;
-the detailed realtime capture remains pending.
+initial user-run 896 x 512 MESS comparison reported a substantial improvement.
+A logged 1536 x 864 loaded pair favors FP16 by `4.1%` in median complete
+depth-source latency; controlled clean captures remain pending.
 
 ## 384 x 384 change
 
@@ -122,6 +123,21 @@ The graph comparisons passed too. At 1536 x 864, maximum absolute error was
 `0.000397` and `0.000682`. See the raw Core ML reports in
 [fp16-input-1536x864](fp16-input-1536x864/coreml-validation.json) and
 [fp16-input-1920x1088](fp16-input-1920x1088/coreml-validation.json).
+
+## Initial 1536 x 864 loaded MESS comparison
+
+A user-run pair with active foreground and face analysis measured `29.46 ms`
+median complete depth-source latency for FP32 input and `28.27 ms` for FP16, a
+`1.19 ms` or `4.1%` reduction. Model latency changed from `26.55 ms` to
+`26.31 ms`, while median presentation changed from `50.79 fps` to `51.03 fps`.
+The larger complete-path improvement is consistent with reduced packing or
+input traffic, although those stages are not timed separately. Complete-path
+p90 remained tied near `31.8 ms`.
+
+Both captures ran longer than 35 seconds, ended normally, and dropped no log
+events. They did not record the exact source segment or effect workload, and
+face count varied. Treat this as directional evidence for retaining the 1536
+FP16 option. See the [full comparison and raw captures](../realtime-depth-macos27/loaded-fp16-comparison-2026-09-28.md).
 
 ## MESS integration
 
