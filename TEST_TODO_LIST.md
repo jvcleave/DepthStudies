@@ -182,13 +182,14 @@ fast graph variant is also the best application option.
 ### Depth Anything 3
 
 - [x] **B01** — `DEPTH DA3 392 CORE ML`, CLEAN.
-- [ ] **B02** — `DEPTH DA3 392 GRAPH`, CLEAN.
-- [ ] **B03** — `DEPTH DA3 518 CORE ML`, CLEAN.
-- [ ] **B04** — `DEPTH DA3 518 GRAPH`, CLEAN.
+- [x] **B02** — `DEPTH DA3 392 GRAPH`, CLEAN.
+- [x] **B03** — `DEPTH DA3 518 CORE ML`, CLEAN.
+- [x] **B04** — `DEPTH DA3 518 GRAPH`, CLEAN.
 
-The standalone 392 routes were close, while 518 MPSGraph was substantially
-slower than Core ML. These captures also replace the older DA3 run whose exact
-shape was not recorded.
+The controlled application routes were close at both shapes. MPSGraph was
+`5.5%` faster at the 392 median. At 518, Core ML was `2.4%` faster at the
+median, while MPSGraph had better p90 and p99 latency. These captures replace
+the older DA3 run whose exact shape was not recorded.
 
 A [23.47-second DA3 392 Core ML capture](studies/realtime-depth-macos27/captures/DA3_392x392_COREML_CLEAN)
 confirmed the configuration and snapshot-path workflow with 24 usable samples,
