@@ -65,6 +65,13 @@ These are single loaded captures with variable face count. The capture did not
 record the source segment, exact effect workload, memory, or delivered depth
 counts. See the [full loaded comparison and raw capture links](loaded-fp16-comparison-2026-09-28.md).
 
+A second loaded ZipDepth batch added 512 x 512 and 672 x 384 FP32 observations
+and a paired 896 x 512 comparison. At 896, FP16 reduced the median complete
+depth-source time from `8.72 ms` to `8.18 ms` (`6.2%`) while both variants held
+a 60 fps presentation median. Its complete-path p90 and p99 were worse, so a
+controlled repeat is still needed. See the
+[second-batch report and raw captures](loaded-zipdepth-batch-2-2026-09-28.md).
+
 ## Limits on comparison
 
 This was not a controlled replay. The DA3 capture saw zero to four faces per

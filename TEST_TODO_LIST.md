@@ -1,8 +1,8 @@
 # Realtime Depth Test TODO List
 
 **Status:** Prepared on 2026-09-28 for later user-run MESS Release batches.
-The first DA2 448 x 336 and ZipDepth 1536 x 864 loaded FP32/FP16 pairs are
-logged as directional observations; the controlled checklist remains open.
+Two loaded capture batches are logged as directional observations; the
+controlled checklist remains open.
 
 Use this checklist to compare the depth options already exposed by MESS and to
 track promising experiments that still need implementation. Check off a run
@@ -107,6 +107,8 @@ by 27.8–36.3% across three paired runs.
 
 The graph-only result was tied, while an initial application observation
 favored FP16. This pair confirms whether packing or input traffic explains it.
+A loaded pair now measures a `6.2%` FP16 improvement at the complete-path
+median, with worse p90 and p99. The CLEAN pair remains necessary.
 
 ### ZipDepth at 1536 x 864
 
@@ -163,6 +165,10 @@ Compare 384 x 384, 512 x 512, 672 x 384, 896 x 512, 1536 x 864, and
 1920 x 1088 using both performance and matched frames. The 512 and 672 shapes
 do not currently have FP16-input graph variants.
 
+Initial LOADED observations are saved for 512 x 512 and 672 x 384. Both held a
+60 fps presentation median, but their competing foreground time differed, so
+they do not replace B09 and B10.
+
 ## Batch C: representative loaded session
 
 Choose finalists only after reviewing Batches A and B.
@@ -183,9 +189,11 @@ every C run. Record their sampled timing fields as contention context.
 Four initial LOADED observations were saved on 2026-09-28: DA2 448 x 336 FP32
 and FP16, plus ZipDepth 1536 x 864 FP32 and FP16. DA2 was tied, while ZipDepth
 FP16 reduced median complete depth-source latency by `4.1%` with a tied p90.
-The C items remain unchecked because the captures lack a matched visual frame,
-source/effect identity, and working-set memory. See the
-[loaded comparison](studies/realtime-depth-macos27/loaded-fp16-comparison-2026-09-28.md).
+A second batch adds a 896 x 512 FP32/FP16 pair, where FP16 improved the median
+by `6.2%` but regressed p90 and p99. The C items remain unchecked because the
+captures lack a matched visual frame, source/effect identity, and working-set
+memory. See the [first loaded comparison](studies/realtime-depth-macos27/loaded-fp16-comparison-2026-09-28.md)
+and [second ZipDepth batch](studies/realtime-depth-macos27/loaded-zipdepth-batch-2-2026-09-28.md).
 
 ## Experiments that are not app buttons yet
 

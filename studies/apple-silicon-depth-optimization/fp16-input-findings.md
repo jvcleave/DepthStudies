@@ -1,10 +1,10 @@
 # ZipDepth FP16 MPSGraph Input Findings
 
 **Status:** Isolated validation passed at 384 x 384, 896 x 512, 1536 x 864, and
-1920 x 1088 on 2026-09-28. The optional MESS variants build successfully. An
-initial user-run 896 x 512 MESS comparison reported a substantial improvement.
-A logged 1536 x 864 loaded pair favors FP16 by `4.1%` in median complete
-depth-source latency; controlled clean captures remain pending.
+1920 x 1088 on 2026-09-28. The optional MESS variants build successfully.
+Logged loaded pairs favor FP16 by `6.2%` at 896 x 512 and `4.1%` at 1536 x 864
+in median complete depth-source latency; controlled clean captures remain
+pending.
 
 ## 384 x 384 change
 
@@ -92,9 +92,23 @@ graph-only execution was effectively tied:
 
 The 896 candidate therefore has no demonstrated graph-inference advantage. Its
 remaining hypotheses are lower Metal pack cost and lower input-buffer traffic,
-which require the complete MESS measurement. See the
+which motivated the complete MESS measurement below. See the
 [raw Core ML report](fp16-input-896x512/coreml-validation.json) and adjacent
 MPSGraph reports.
+
+### Initial loaded MESS comparison
+
+A user-run pair with active foreground and face analysis measured `8.72 ms`
+median complete depth-source latency for FP32 input and `8.18 ms` for FP16, a
+`0.54 ms` or `6.2%` reduction. Model latency changed from `8.61 ms` to
+`8.00 ms`, while both variants held a `60.00 fps` presentation median.
+
+The FP16 complete-path p90 increased from `9.24 ms` to `9.58 ms`, and p99
+increased from `9.49 ms` to `12.90 ms`. Both captures ended normally and
+dropped no log events, but the exact source and effect workload were not
+recorded. Treat the median improvement as promising and repeat the pair under
+the controlled contract before selecting a default. See the
+[second-batch report and raw captures](../realtime-depth-macos27/loaded-zipdepth-batch-2-2026-09-28.md).
 
 ## High-resolution results
 

@@ -34,6 +34,8 @@ halves graph-input bytes and records tied isolated and initial loaded execution.
 The [loaded FP16 comparison](studies/realtime-depth-macos27/loaded-fp16-comparison-2026-09-28.md)
 preserves the first configured DA2 448 x 336 and ZipDepth 1536 x 864 capture
 pairs; the ZipDepth pair favors FP16 by `4.1%` at the complete-path median.
+The [second loaded ZipDepth batch](studies/realtime-depth-macos27/loaded-zipdepth-batch-2-2026-09-28.md)
+adds 512 x 512 and 672 x 384 observations and a paired 896 x 512 result.
 The [DA3 compute-unit study](studies/apple-silicon-depth-optimization/da3-compute-unit-findings.md)
 finds CPU plus GPU faster than CPU plus Neural Engine and `all` at 392 x 392.
 
