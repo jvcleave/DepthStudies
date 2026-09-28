@@ -198,12 +198,32 @@ The FP16 candidate's compute plan estimates 98.24% Neural Engine cost versus
 98.03% for the original package. That is enough to justify one measurement,
 but it does not predict an improvement.
 
+### DA3 Core ML compute-unit sweep
+
+- [ ] Benchmark the existing 392 x 392 image-input package with fixed
+  `cpuAndGPU`, `cpuAndNeuralEngine`, and `all` configurations.
+- [ ] Run three alternating comparisons and record median, p90, p99, numerical
+  error, and host/runtime versions.
+- [ ] Repeat the sweep at 518 x 518 only if a non-GPU route is competitive at
+  392 x 392 or if the 518 quality difference justifies the extra work.
+- [ ] Add an explicit app option only for a route that wins in isolation; do
+  not restore workload-driven compute-unit switching.
+
+The current compute plans estimate 97.66% Neural Engine cost at 392 x 392 and
+97.02% at 518 x 518 under CPU plus Neural Engine. DA3's native SDPA is supported
+by CPU, GPU, and Neural Engine in these packages, so this measurement is more
+plausible than rewriting its attention graph. Placement estimates are not
+runtime evidence; DA2 already demonstrated that high estimated ANE placement
+can still be slower.
+
 ### DA3 FP16 graph input
 
 - [ ] Export and validate a 392 x 392 planar-FP16 DA3 package.
 - [ ] Measure it against the existing 392 x 392 FP32-input graph.
 - [ ] Integrate an optional app button only if the isolated candidate passes.
 - [ ] Try 518 x 518 only if the 392 x 392 experiment succeeds.
+- [ ] Consider an intermediate 448 x 448 package only if the controlled 392 and
+  518 results reveal a useful quality/performance gap.
 
 ### ZipDepth Neural Engine graph variants
 
@@ -222,6 +242,10 @@ but it does not predict an improvement.
 - The original DA2 CPU-plus-Neural-Engine route measured 23.01 ms versus
   14.86 ms for CPU plus GPU in earlier standalone runs. Production DA2 should
   remain CPU plus GPU unless the new FP16 tensor experiment reverses that.
+- Do not revive the old camera-token-disabled DA3 conversion. It removed the
+  learned camera token and alternating global-attention behavior, and its
+  output reached only `0.9293` Pearson correlation with the official path on
+  the recorded sample. The current camera-token package is the valid baseline.
 
 ## Results to retain for every accepted run
 
