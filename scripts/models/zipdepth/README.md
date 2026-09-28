@@ -1,8 +1,16 @@
 # ZipDepth workflow
 
-`build.sh` reproduces the fixed 384 x 384 ZipDepth Base NPU Core ML source and
-its MPSGraph package. It pins and validates the upstream revision, NPU checkpoint
-SHA-256, Python versions, tensor shape, and conversion target.
+The artifact-specific entry points reproduce fixed ZipDepth Base NPU Core ML
+sources and their MPSGraph packages:
+
+```sh
+scripts/models/zipdepth/build_384.sh
+scripts/models/zipdepth/build_512.sh
+```
+
+Both workflows pin and validate the upstream revision, NPU checkpoint SHA-256,
+Python versions, tensor shape, and conversion target. Running `build.sh`
+directly defaults to 384 x 384; `ZIPDEPTH_VARIANT` accepts `384` or `512`.
 
 The Core ML export uses `ct.target.iOS16`, which Core ML Tools aliases to macOS
 13, so the `.mlpackage` supports macOS 15.
@@ -11,7 +19,7 @@ The release-compatible default target is macOS 27. ZipDepth also converts for
 macOS 15:
 
 ```sh
-MPSGRAPH_MINIMUM_TARGET=15.0.0 scripts/models/zipdepth/build.sh
+MPSGRAPH_MINIMUM_TARGET=15.0.0 scripts/models/zipdepth/build_384.sh
 ```
 
 A macOS 15 package still needs execution testing on the oldest claimed system

@@ -13,7 +13,22 @@ venv_dir="${ZIPDEPTH_VENV_DIR:-$build_root/venv}"
 coreml_dir="$build_root/coreml"
 graph_dir="$build_root/mpsgraph"
 download_dir="$build_root/downloads"
-model_name=ZipDepthBaseNPU384x384
+case "${ZIPDEPTH_VARIANT:-384}" in
+    384)
+        model_width=384
+        model_height=384
+        model_name=ZipDepthBaseNPU384x384
+        ;;
+    512)
+        model_width=512
+        model_height=512
+        model_name=ZipDepthBaseNPU512x512
+        ;;
+    *)
+        echo "ZIPDEPTH_VARIANT must be 384 or 512" >&2
+        exit 64
+        ;;
+esac
 model_path="$coreml_dir/$model_name.mlpackage"
 checkpoint_path="${ZIPDEPTH_CHECKPOINT:-$download_dir/zipdepth_base_npu.pth}"
 
@@ -73,8 +88,8 @@ fi
 "$venv_dir/bin/python" "$script_dir/export_coreml.py" \
     --source-root "$source_root" \
     --checkpoint "$checkpoint_path" \
-    --width 384 \
-    --height 384 \
+    --width "$model_width" \
+    --height "$model_height" \
     --output "$model_path"
 
 "$repo_root/scripts/common/convert_coreml_to_mpsgraph.sh" \
