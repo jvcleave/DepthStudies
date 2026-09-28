@@ -54,13 +54,13 @@ The configured pair observations so far are:
 
 See the [first configured capture report](realtime-depth-macos27/loaded-fp16-comparison-2026-09-28.md),
 [second ZipDepth report](realtime-depth-macos27/loaded-zipdepth-batch-2-2026-09-28.md),
-and [test TODO list](../TEST_TODO_LIST.md) for the remaining controlled runs.
+and [test TODO list](../TEST_TODO_LIST.md) for the test protocol and follow-ups.
 
 ### Controlled depth-only captures
 
-These twenty accepted captures used the 20-second CLEAN contract. Every run
-ended normally with zero dropped events, recorded no foreground or face timing,
-and linked a valid 1920 x 1080 snapshot. Timing values are
+These twenty-three accepted captures used the 20-second CLEAN contract. Every
+run ended normally with zero dropped events, recorded no foreground or face
+timing, and linked a valid 1920 x 1080 snapshot. Timing values are
 `median / p90 / p99`.
 
 | Capture | Shape | Backend / input | Duration / n | Model latency | Complete depth-source latency | Presentation median | Example |
@@ -82,17 +82,21 @@ and linked a valid 1920 x 1080 snapshot. Timing values are
 | [ZipDepth 896](realtime-depth-macos27/captures/ZIP_896x512_COREML_CLEAN) | 896 x 512 | Core ML image | 34.20 s / 35 | 9.57 / 10.02 / 11.04 ms | 10.86 / 11.65 / 12.32 ms | 60.007 fps | [PNG](../images/examples/zipdepth-896x512-coreml-clean.png) |
 | [ZipDepth 896](realtime-depth-macos27/captures/ZIP_896x512_MPSGRAPH_FP32_CLEAN) | 896 x 512 | MPSGraph FP32 | 32.10 s / 32 | 12.11 / 12.93 / 13.23 ms | 12.67 / 13.36 / 16.81 ms | 59.999 fps | [PNG](../images/examples/zipdepth-896x512-mpsgraph-fp32-clean.png) |
 | [ZipDepth 896](realtime-depth-macos27/captures/ZIP_896x512_MPSGRAPH_FP16_CLEAN) | 896 x 512 | MPSGraph FP16 | 32.82 s / 33 | 11.55 / 12.59 / 12.82 ms | 11.55 / 12.75 / 13.30 ms | 59.993 fps | [PNG](../images/examples/zipdepth-896x512-mpsgraph-fp16-clean.png) |
+| [ZipDepth 1536](realtime-depth-macos27/captures/ZIP_1536x864_COREML_CLEAN) | 1536 x 864 | Core ML image | 34.63 s / 35 | 34.24 / 34.83 / 35.49 ms | 35.54 / 36.03 / 36.90 ms | 60.002 fps | [PNG](../images/examples/zipdepth-1536x864-coreml-clean.png) |
+| [ZipDepth 1536](realtime-depth-macos27/captures/ZIP_1536x864_MPSGRAPH_FP32_CLEAN) | 1536 x 864 | MPSGraph FP32 | 34.93 s / 35 | 15.29 / 19.61 / 22.56 ms | 15.47 / 20.58 / 25.19 ms | 60.007 fps | [PNG](../images/examples/zipdepth-1536x864-mpsgraph-fp32-clean.png) |
+| [ZipDepth 1536](realtime-depth-macos27/captures/ZIP_1536x864_MPSGRAPH_FP16_CLEAN) | 1536 x 864 | MPSGraph FP16 | 33.81 s / 34 | 15.17 / 15.40 / 16.72 ms | 15.32 / 15.61 / 16.95 ms | 59.999 fps | [PNG](../images/examples/zipdepth-1536x864-mpsgraph-fp16-clean.png) |
 | [ZipDepth 1920](realtime-depth-macos27/captures/ZIP_1920x1088_COREML_CLEAN) | 1920 x 1088 | Core ML image | 33.80 s / 34 | 60.68 / 61.07 / 61.41 ms | 61.70 / 61.98 / 62.29 ms | 60.000 fps | [PNG](../images/examples/zipdepth-1920x1088-coreml-clean.png) |
 | [ZipDepth 1920](realtime-depth-macos27/captures/ZIP_1920x1088_MPSGRAPH_FP32_CLEAN) | 1920 x 1088 | MPSGraph FP32 | 33.47 s / 34 | 43.23 / 45.91 / 55.91 ms | 44.27 / 46.60 / 53.21 ms | 59.906 fps | [PNG](../images/examples/zipdepth-1920x1088-mpsgraph-fp32-clean.png) |
 | [ZipDepth 1920](realtime-depth-macos27/captures/ZIP_1920x1088_MPSGRAPH_FP16_CLEAN) | 1920 x 1088 | MPSGraph FP16 | 34.18 s / 34 | 43.63 / 46.09 / 47.73 ms | 44.86 / 46.44 / 47.17 ms | 59.429 fps | [PNG](../images/examples/zipdepth-1920x1088-mpsgraph-fp16-clean.png) |
 
-MPSGraph FP32 reduced median complete-path latency versus Core ML by `8.0%` for
+MPSGraph reduced median complete-path latency versus Core ML by `8.0%` for
 DA2, `29.9%` at ZipDepth 384 x 384, `30.6%` at ZipDepth 512 x 512, `23.5%` at
-ZipDepth 672 x 384, and `28.3%` at ZipDepth 1920 x 1088. Core ML instead won at
-ZipDepth 896 x 512 with a `10.86 ms` median. DA2 FP16 was tied with FP32,
-ZipDepth 384 FP16 was `10.2%` slower, ZipDepth 896 FP16 was `8.9%` faster, and
-ZipDepth 1920 FP16 was effectively tied with a lower presentation median. The
-duplicate 672 x 384 Core ML run was discarded.
+ZipDepth 672 x 384, `56.9%` at ZipDepth 1536 x 864 using FP16, and `28.3%` at
+ZipDepth 1920 x 1088. Core ML instead won at ZipDepth 896 x 512 with a
+`10.86 ms` median. DA2 FP16 was tied with FP32, ZipDepth 384 FP16 was `10.2%`
+slower, ZipDepth 896 FP16 was `8.9%` faster, ZipDepth 1536 FP16 materially
+improved tail latency, and ZipDepth 1920 FP16 was effectively tied with a lower
+presentation median. The duplicate 672 x 384 Core ML run was discarded.
 
 DA3 MPSGraph improved the 392 x 392 median by `5.5%` versus Core ML. At
 518 x 518, Core ML improved the median by `2.4%`, while MPSGraph had better p90
@@ -153,8 +157,9 @@ The newer DA3 compute-unit sweep supersedes the earlier 392 x 392 value for
 choosing Core ML compute units. It does not replace that historical backend
 comparison because its runtime state and protocol differ.
 
-## Missing realtime rows
+## Clean realtime coverage
 
-The remaining CLEAN realtime gaps are the three ZipDepth 1536 routes. Those
-gaps stay explicit in the
-[test TODO list](../TEST_TODO_LIST.md).
+The planned CLEAN realtime matrix is complete. Every exposed DA2, DA3, and
+ZipDepth Core ML/MPSGraph variant has an accepted capture and snapshot. The
+[test TODO list](../TEST_TODO_LIST.md) retains optional loaded-session repeats
+and experiments that are not app buttons.

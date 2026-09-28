@@ -1,8 +1,8 @@
 # Realtime depth through MPSGraph on macOS 27
 
-Recorded 2026-09-25 on an Apple M1 Max running macOS 27.0 with Xcode 27.0
-(build 27A266a). The MESS realtime session targeted 60 fps and used the
-MPSMediaPipe face backend.
+The original captures were recorded 2026-09-25 and the controlled depth-only
+matrix was recorded 2026-09-28 on an Apple M1 Max running macOS 27.0 with Xcode
+27.0 (build 27A266a). The MESS realtime session targeted 60 fps.
 
 See the [full performance comparison](../depth-performance-comparison.md) for
 all checked-in realtime captures and the separate standalone harness tables.
@@ -28,7 +28,7 @@ slower than ZipDepth.
 
 ## Controlled depth-only MPSGraph sweep
 
-The next batch replaces the loaded, incompletely identified rows above with a
+This batch replaces the loaded, incompletely identified rows above with a
 controlled Release run. Every row uses the same prerecorded source and segment,
 output dimensions, 60 fps target, and one identical depth-consuming effect or
 preset. All other effects, foreground/person analysis, and face analysis are
@@ -53,15 +53,15 @@ target macOS 27. The runtime machine remains macOS 27.
 | M08 | ZipDepth Base NPU | 672 x 384 | FP32 | macOS 27 | [Raw](captures/ZIP_672x384_MPSGRAPH_FP32_CLEAN) / [PNG](../../images/examples/zipdepth-672x384-mpsgraph-fp32-clean.png) | 8.07 ms | 8.26 ms | 8.86 ms | 59.989 fps |
 | M09 | ZipDepth Base NPU | 896 x 512 | FP32 | macOS 15 | [Raw](captures/ZIP_896x512_MPSGRAPH_FP32_CLEAN) / [PNG](../../images/examples/zipdepth-896x512-mpsgraph-fp32-clean.png) | 12.11 ms | 12.67 ms | 13.36 ms | 59.999 fps |
 | M10 | ZipDepth Base NPU | 896 x 512 | FP16 | macOS 27 | [Raw](captures/ZIP_896x512_MPSGRAPH_FP16_CLEAN) / [PNG](../../images/examples/zipdepth-896x512-mpsgraph-fp16-clean.png) | 11.55 ms | 11.55 ms | 12.75 ms | 59.993 fps |
-| M11 | ZipDepth Base NPU | 1536 x 864 | FP32 | macOS 27 | Pending | — | — | — | — |
-| M12 | ZipDepth Base NPU | 1536 x 864 | FP16 | macOS 27 | Pending | — | — | — | — |
+| M11 | ZipDepth Base NPU | 1536 x 864 | FP32 | macOS 27 | [Raw](captures/ZIP_1536x864_MPSGRAPH_FP32_CLEAN) / [PNG](../../images/examples/zipdepth-1536x864-mpsgraph-fp32-clean.png) | 15.29 ms | 15.47 ms | 20.58 ms | 60.007 fps |
+| M12 | ZipDepth Base NPU | 1536 x 864 | FP16 | macOS 27 | [Raw](captures/ZIP_1536x864_MPSGRAPH_FP16_CLEAN) / [PNG](../../images/examples/zipdepth-1536x864-mpsgraph-fp16-clean.png) | 15.17 ms | 15.32 ms | 15.61 ms | 59.999 fps |
 | M13 | ZipDepth Base NPU | 1920 x 1088 | FP32 | macOS 27 | [Raw](captures/ZIP_1920x1088_MPSGRAPH_FP32_CLEAN) / [PNG](../../images/examples/zipdepth-1920x1088-mpsgraph-fp32-clean.png) | 43.23 ms | 44.27 ms | 46.60 ms | 59.906 fps |
 | M14 | ZipDepth Base NPU | 1920 x 1088 | FP16 | macOS 27 | [Raw](captures/ZIP_1920x1088_MPSGRAPH_FP16_CLEAN) / [PNG](../../images/examples/zipdepth-1920x1088-mpsgraph-fp16-clean.png) | 43.63 ms | 44.86 ms | 46.44 ms | 59.429 fps |
 
 The operational checklist and exact App Settings labels are in the
-[Realtime Depth Test TODO List](../../TEST_TODO_LIST.md). Once captures are
-available, accept each row only after its `capture.configuration` event matches
-the expected backend, variant, input type, and dimensions.
+[Realtime Depth Test TODO List](../../TEST_TODO_LIST.md). Every row is now
+complete, and each `capture.configuration` event matches the expected backend,
+variant, input type, and dimensions.
 
 The controlled application results do not reproduce the earlier isolated
 ZipDepth 384 FP16 gain. At 384 x 384, FP16 increased median complete-path
@@ -71,7 +71,9 @@ At DA2 448 x 336, FP16 changed median complete-path latency from `15.35 ms` to
 `15.38 ms`, an effectively tied `0.2%` increase. At ZipDepth 896 x 512, FP16
 reduced the median from `12.67 ms` to `11.55 ms` (`8.9%`) and improved p90 and
 p99. FP32 remains preferred for DA2, ZipDepth 384, and ZipDepth 1920; FP16 is
-the preferred MPSGraph input at ZipDepth 896.
+the preferred MPSGraph input at ZipDepth 896. At ZipDepth 1536, FP16 improved
+the median by only `1.0%` but reduced p90 from `20.58 ms` to `15.61 ms` and p99
+from `25.19 ms` to `16.95 ms`, making FP16 the preferred graph route there.
 
 ## Depth-only Core ML validation
 
@@ -89,12 +91,14 @@ policy; the capture does not record the device placement selected by Core ML.
 | [ZipDepth 512 Core ML](captures/ZIP_512x512_COREML_CLEAN) | 33.85 s / 34 | 9.65 / 10.33 / 10.58 ms | 11.29 / 12.27 / 12.52 ms | 60.003 fps | ![ZipDepth 512 Core ML clean snapshot](../../images/examples/zipdepth-512x512-coreml-clean.png) |
 | [ZipDepth 672 Core ML](captures/ZIP_672x384_COREML_CLEAN) | 32.62 s / 33 | 9.69 / 10.11 / 10.61 ms | 10.80 / 11.59 / 12.26 ms | 59.996 fps | ![ZipDepth 672 Core ML clean snapshot](../../images/examples/zipdepth-672x384-coreml-clean.png) |
 | [ZipDepth 896 Core ML](captures/ZIP_896x512_COREML_CLEAN) | 34.20 s / 35 | 9.57 / 10.02 / 11.04 ms | 10.86 / 11.65 / 12.32 ms | 60.007 fps | ![ZipDepth 896 Core ML clean snapshot](../../images/examples/zipdepth-896x512-coreml-clean.png) |
+| [ZipDepth 1536 Core ML](captures/ZIP_1536x864_COREML_CLEAN) | 34.63 s / 35 | 34.24 / 34.83 / 35.49 ms | 35.54 / 36.03 / 36.90 ms | 60.002 fps | ![ZipDepth 1536 Core ML clean snapshot](../../images/examples/zipdepth-1536x864-coreml-clean.png) |
 | [ZipDepth 1920 Core ML](captures/ZIP_1920x1088_COREML_CLEAN) | 33.80 s / 34 | 60.68 / 61.07 / 61.41 ms | 61.70 / 61.98 / 62.29 ms | 60.000 fps | ![ZipDepth 1920 Core ML clean snapshot](../../images/examples/zipdepth-1920x1088-coreml-clean.png) |
 
-Against the Core ML controls, MPSGraph FP32 reduced median complete-path
+Against the Core ML controls, MPSGraph reduced median complete-path
 latency by `8.0%` for DA2, `29.9%` for ZipDepth 384, `30.6%` for ZipDepth 512,
-`23.5%` for ZipDepth 672, and `28.3%` for ZipDepth 1920. Two supplied 672
-Core ML captures were duplicates, so only the first was kept.
+`23.5%` for ZipDepth 672, `56.9%` for ZipDepth 1536 using FP16, and `28.3%` for
+ZipDepth 1920. Two supplied 672 Core ML captures were duplicates, so only the
+first was kept.
 
 For DA3, MPSGraph reduced the 392 x 392 complete-path median by `5.5%` versus
 Core ML. At 518 x 518, Core ML had a `2.4%` lower median, but MPSGraph improved

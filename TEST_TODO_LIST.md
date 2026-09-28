@@ -1,8 +1,7 @@
 # Realtime Depth Test TODO List
 
-**Status:** Prepared on 2026-09-28 for later user-run MESS Release batches.
-Two loaded capture batches are logged as directional observations; the
-controlled checklist remains open.
+**Status:** The 2026-09-28 CLEAN Release matrix is complete. Loaded-session
+finalist repeats and experimental variants remain optional follow-up work.
 
 See the [full performance comparison](studies/depth-performance-comparison.md)
 for every realtime and standalone result recorded so far.
@@ -86,12 +85,12 @@ Use these names consistently in run directories and notes.
 Run CLEAN first. Repeat only the leading candidates and their direct baselines
 under LOADED. This keeps the batch small while still exposing GPU contention.
 
-## Current run: depth-only MPSGraph sweep
+## Completed run: depth-only MPSGraph sweep
 
-This is the controlled batch planned for the next MESS run. It covers every
-MPSGraph depth option currently exposed in App Settings. Use the rows in this
-order so each FP32/FP16 pair remains adjacent. Capture 20 seconds per row after
-warm-up, using a fresh app launch for every selection.
+This controlled batch covers every MPSGraph depth option currently exposed in
+App Settings. Runs used the order below so each FP32/FP16 pair remained
+adjacent, with at least 20 seconds captured after warm-up and a fresh app launch
+for every selection.
 
 The package target is part of the result identity. `DEPTH ZIP 896 GRAPH` uses
 the macOS 15-compatible graph; the other graph packages in this batch target
@@ -162,8 +161,12 @@ using MPSGraph.
 
 ### ZipDepth at 1536 x 864
 
-- [ ] **A08** — `DEPTH ZIP 1536 GRAPH`, CLEAN.
-- [ ] **A09** — `DEPTH ZIP 1536 F16 GRAPH`, CLEAN.
+- [x] **A08** — `DEPTH ZIP 1536 GRAPH`, CLEAN.
+- [x] **A09** — `DEPTH ZIP 1536 F16 GRAPH`, CLEAN.
+
+FP16 improved the median by only `1.0%` but materially tightened the tails:
+p90 fell from `20.58 ms` to `15.61 ms` and p99 from `25.19 ms` to `16.95 ms`.
+Prefer FP16 at this shape.
 
 ### ZipDepth at 1920 x 1088
 
@@ -200,7 +203,7 @@ so it completes B01 under the 20-second test contract.
 
 - [x] **B05** — `DEPTH ZIP 384 CORE ML`, CLEAN.
 - [x] **B06** — `DEPTH ZIP 896 CORE ML`, CLEAN.
-- [ ] **B07** — `DEPTH ZIP 1536 CORE ML`, CLEAN.
+- [x] **B07** — `DEPTH ZIP 1536 CORE ML`, CLEAN.
 - [x] **B08** — `DEPTH ZIP 1080 CORE ML`, CLEAN.
 
 ZipDepth Core ML retains the existing priority policy: it may use the
