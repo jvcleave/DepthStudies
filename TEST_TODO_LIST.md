@@ -188,6 +188,11 @@ The standalone 392 routes were close, while 518 MPSGraph was substantially
 slower than Core ML. These captures also replace the older DA3 run whose exact
 shape was not recorded.
 
+A [23.47-second DA3 392 Core ML validation capture](studies/realtime-depth-macos27/captures/DA3_392x392_COREML_CLEAN_PRELIMINARY)
+confirmed the configuration and snapshot-path workflow. It remains preliminary
+because it contains only 24 usable samples and is shorter than the 30-second
+minimum, so B01 remains unchecked.
+
 ### ZipDepth Core ML controls
 
 - [ ] **B05** — `DEPTH ZIP 384 CORE ML`, CLEAN.

@@ -54,6 +54,18 @@ See the [first configured capture report](realtime-depth-macos27/loaded-fp16-com
 [second ZipDepth report](realtime-depth-macos27/loaded-zipdepth-batch-2-2026-09-28.md),
 and [test TODO list](../TEST_TODO_LIST.md) for the remaining controlled runs.
 
+### Preliminary clean Core ML validation
+
+One snapshot-linked depth-only validation capture is checked in separately. It
+used DA3 392 x 392 through Core ML, recorded no foreground or face timing, and
+ended with zero dropped events. Its 23.47-second duration is below the current
+30-second acceptance minimum, so it remains preliminary and does not complete
+the B01 checklist item.
+
+| Capture | Shape | Backend | Duration / n | Model latency | Complete depth-source latency | Presentation median | Example |
+| --- | ---: | --- | ---: | ---: | ---: | ---: | --- |
+| [DA3 392 clean preliminary](realtime-depth-macos27/captures/DA3_392x392_COREML_CLEAN_PRELIMINARY) | 392 x 392 | Core ML | 23.47 s / 24 | 15.18 / 15.74 / 17.52 ms | 16.43 / 16.86 / 19.00 ms | 60.006 fps | [PNG](../images/examples/da3-392x392-coreml-clean-preliminary.png) |
+
 ## Paired standalone experiments
 
 These rows aggregate three alternating trials from each study. Each displayed
@@ -111,7 +123,7 @@ comparison because its runtime state and protocol differ.
 
 ## Missing realtime rows
 
-No configured realtime capture has yet been checked in for ZipDepth 384 x 384,
-ZipDepth 1920 x 1088, either DA3 fixed shape, or any Core ML app route. CLEAN
-FP32/FP16 pairs also remain pending. Those gaps stay explicit in the
+No accepted configured realtime capture has yet been checked in for ZipDepth
+384 x 384, ZipDepth 1920 x 1088, either DA3 fixed shape, or a Core ML app
+route. CLEAN FP32/FP16 pairs also remain pending. Those gaps stay explicit in the
 [test TODO list](../TEST_TODO_LIST.md).

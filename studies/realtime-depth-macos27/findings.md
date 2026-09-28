@@ -63,6 +63,21 @@ The operational checklist and exact App Settings labels are in the
 available, accept each row only after its `capture.configuration` event matches
 the expected backend, variant, input type, and dimensions.
 
+## Preliminary depth-only Core ML validation
+
+The first snapshot-linked validation run selected **Depth Anything 3 at
+392 x 392 through Core ML**. It recorded no foreground or face timing fields,
+ended normally with zero dropped events, and held a `60.006 fps` median
+presentation rate. The snapshot event resolved to a valid 1920 x 1080 PNG.
+
+This run is retained as preliminary evidence because its 23.47-second duration
+is below the 30-second acceptance minimum. It does not complete B01 and is not
+part of the pending MPSGraph M01–M14 table.
+
+| Route | Duration / samples | Model median / p90 / p99 | Depth-source median / p90 / p99 | Example |
+| --- | ---: | ---: | ---: | --- |
+| [DA3 392 Core ML preliminary](captures/DA3_392x392_COREML_CLEAN_PRELIMINARY) | 23.47 s / 24 | 15.18 / 15.74 / 17.52 ms | 16.43 / 16.86 / 19.00 ms | ![DA3 392 Core ML clean preliminary snapshot](../../images/examples/da3-392x392-coreml-clean-preliminary.png) |
+
 ## How the realtime capture was measured
 
 MESS instrumented each completed depth request while its diagnostic capture was
