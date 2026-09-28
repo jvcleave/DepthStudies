@@ -8,18 +8,23 @@ scripts/models/zipdepth/build_384.sh
 scripts/models/zipdepth/build_512.sh
 scripts/models/zipdepth/build_672x384.sh
 scripts/models/zipdepth/build_896x512.sh
+scripts/models/zipdepth/build_1536x864.sh
 scripts/models/zipdepth/build_1920x1088.sh
 ```
 
 All workflows pin and validate the upstream revision, NPU checkpoint SHA-256,
 Python versions, tensor shape, and conversion target. Running `build.sh`
 directly defaults to 384 x 384; `ZIPDEPTH_VARIANT` accepts `384`, `512`,
-`672x384`, `896x512`, or `1920x1088`.
+`672x384`, `896x512`, `1536x864`, or `1920x1088`.
 
 The 672 x 384 and 896 x 512 variants preserve a 16:9 source shape while using
 the upstream inference policy's documented 384 and 512 short-side sizes,
 rounded to multiples of 32. They use the same pinned checkpoint as the square
 variants and are not separately trained models.
+
+The 1536 x 864 option is an exact 16:9 high-resolution compromise. Its
+1,327,104-pixel tensor has 36.5% fewer pixels than 1920 x 1088 while remaining
+2.89 times the area of 896 x 512.
 
 The 1920 x 1088 variant is the full-width 1080-class experiment. A literal
 1920 x 1080 tensor is invalid because ZipDepth requires each dimension to be a
