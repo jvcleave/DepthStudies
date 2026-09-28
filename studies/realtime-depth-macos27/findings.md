@@ -51,8 +51,8 @@ target macOS 27. The runtime machine remains macOS 27.
 | M06 | ZipDepth Base NPU | 384 x 384 | FP16 | macOS 27 | [Raw](captures/ZIP_384x384_MPSGRAPH_FP16_CLEAN) / [PNG](../../images/examples/zipdepth-384x384-mpsgraph-fp16-clean.png) | 6.14 ms | 6.37 ms | 6.80 ms | 59.996 fps |
 | M07 | ZipDepth Base NPU | 512 x 512 | FP32 | macOS 27 | [Raw](captures/ZIP_512x512_MPSGRAPH_FP32_CLEAN) / [PNG](../../images/examples/zipdepth-512x512-mpsgraph-fp32-clean.png) | 7.67 ms | 7.84 ms | 8.49 ms | 59.991 fps |
 | M08 | ZipDepth Base NPU | 672 x 384 | FP32 | macOS 27 | [Raw](captures/ZIP_672x384_MPSGRAPH_FP32_CLEAN) / [PNG](../../images/examples/zipdepth-672x384-mpsgraph-fp32-clean.png) | 8.07 ms | 8.26 ms | 8.86 ms | 59.989 fps |
-| M09 | ZipDepth Base NPU | 896 x 512 | FP32 | macOS 15 | Pending | — | — | — | — |
-| M10 | ZipDepth Base NPU | 896 x 512 | FP16 | macOS 27 | Pending | — | — | — | — |
+| M09 | ZipDepth Base NPU | 896 x 512 | FP32 | macOS 15 | [Raw](captures/ZIP_896x512_MPSGRAPH_FP32_CLEAN) / [PNG](../../images/examples/zipdepth-896x512-mpsgraph-fp32-clean.png) | 12.11 ms | 12.67 ms | 13.36 ms | 59.999 fps |
+| M10 | ZipDepth Base NPU | 896 x 512 | FP16 | macOS 27 | [Raw](captures/ZIP_896x512_MPSGRAPH_FP16_CLEAN) / [PNG](../../images/examples/zipdepth-896x512-mpsgraph-fp16-clean.png) | 11.55 ms | 11.55 ms | 12.75 ms | 59.993 fps |
 | M11 | ZipDepth Base NPU | 1536 x 864 | FP32 | macOS 27 | Pending | — | — | — | — |
 | M12 | ZipDepth Base NPU | 1536 x 864 | FP16 | macOS 27 | Pending | — | — | — | — |
 | M13 | ZipDepth Base NPU | 1920 x 1088 | FP32 | macOS 27 | [Raw](captures/ZIP_1920x1088_MPSGRAPH_FP32_CLEAN) / [PNG](../../images/examples/zipdepth-1920x1088-mpsgraph-fp32-clean.png) | 43.23 ms | 44.27 ms | 46.60 ms | 59.906 fps |
@@ -68,8 +68,10 @@ ZipDepth 384 FP16 gain. At 384 x 384, FP16 increased median complete-path
 latency by `10.2%` versus FP32. At 1920 x 1088, FP16 increased the median by
 `1.3%`; the p90 was effectively tied, while median presentation was lower.
 At DA2 448 x 336, FP16 changed median complete-path latency from `15.35 ms` to
-`15.38 ms`, an effectively tied `0.2%` increase. FP32 is therefore the current
-preferred graph input for all three captured FP32/FP16 pairs.
+`15.38 ms`, an effectively tied `0.2%` increase. At ZipDepth 896 x 512, FP16
+reduced the median from `12.67 ms` to `11.55 ms` (`8.9%`) and improved p90 and
+p99. FP32 remains preferred for DA2, ZipDepth 384, and ZipDepth 1920; FP16 is
+the preferred MPSGraph input at ZipDepth 896.
 
 ## Depth-only Core ML validation
 
@@ -97,6 +99,10 @@ Core ML captures were duplicates, so only the first was kept.
 For DA3, MPSGraph reduced the 392 x 392 complete-path median by `5.5%` versus
 Core ML. At 518 x 518, Core ML had a `2.4%` lower median, but MPSGraph improved
 p90 from `54.71 ms` to `52.66 ms` and p99 from `61.09 ms` to `53.77 ms`.
+
+At ZipDepth 896 x 512, Core ML retained the best median at `10.86 ms`. FP16
+MPSGraph measured `11.55 ms` and FP32 MPSGraph measured `12.67 ms`. The FP32
+graph is the macOS 15-targeted package, while the FP16 graph targets macOS 27.
 
 ## How the realtime capture was measured
 

@@ -151,13 +151,14 @@ complete-path latency by `10.2%`. Prefer the FP32 graph at this shape.
 
 ### ZipDepth at 896 x 512
 
-- [ ] **A06** — `DEPTH ZIP 896 GRAPH`, CLEAN.
-- [ ] **A07** — `DEPTH ZIP 896 F16 GRAPH`, CLEAN.
+- [x] **A06** — `DEPTH ZIP 896 GRAPH`, CLEAN.
+- [x] **A07** — `DEPTH ZIP 896 F16 GRAPH`, CLEAN.
 
-The graph-only result was tied, while an initial application observation
-favored FP16. This pair confirms whether packing or input traffic explains it.
-A loaded pair now measures a `6.2%` FP16 improvement at the complete-path
-median, with worse p90 and p99. The CLEAN pair remains necessary.
+The clean application pair favored FP16: it reduced median complete-path
+latency by `8.9%` versus FP32 and improved p90 and p99. Core ML remained faster
+than both graph routes at a `10.86 ms` median versus `11.55 ms` for FP16 and
+`12.67 ms` for FP32. Prefer Core ML at this shape; prefer FP16 when explicitly
+using MPSGraph.
 
 ### ZipDepth at 1536 x 864
 
