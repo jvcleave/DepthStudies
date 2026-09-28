@@ -18,10 +18,14 @@ attached ZipDepth graph assets also use the macOS 27 study configuration.
   672 x 384, 896 x 512, 1536 x 864, and 1920 x 1088.
 - ZipDepth Base NPU with planar-FP16 graph inputs at 384 x 384, 896 x 512,
   1536 x 864, and 1920 x 1088.
+- A separate macOS 15-targeted serialization of the standard ZipDepth
+  896 x 512 graph. It was output-validated on macOS 27 but has not yet been
+  executed on macOS 15.
 
 The attached `mpsgraph-depth-models-macos27-v0.1.0.json` records the exact
 tensor contracts, provenance, archive sizes and digests, and per-variant runtime
-status. `SHA256SUMS.txt` verifies the manifest and all 28 model archives.
+status. `SHA256SUMS.txt` verifies the manifest, all 28 Core ML/macOS 27 model
+archives, and the macOS 15-targeted ZipDepth archive.
 
 ## Compatibility
 
@@ -32,7 +36,8 @@ The `.mlpackage` and `.mpsgraphpackage` assets have different OS requirements:
 | DA2 Small 448 x 336, both input variants | Supports macOS 15; declared floor is macOS 13 | Requires macOS 27 | Targets 26 and 15 fail |
 | DA3 Small 518 x 518 | Supports macOS 15 | Requires macOS 27 | Targets 26 and 15 fail |
 | DA3 Small 392 x 392 | Supports macOS 15 | Requires macOS 27 | Targets 26 and 15 fail |
-| ZipDepth Base NPU, all attached variants | Supports macOS 15; declared floor is macOS 13 | Attached builds require macOS 27 | The original 384 x 384 variant converts for targets 26 and 15; the expanded variants were packaged only for target 27 |
+| ZipDepth Base NPU, standard attached variants | Supports macOS 15; declared floor is macOS 13 | Standard attached builds require macOS 27 | The original 384 x 384 variant converts for targets 26 and 15 |
+| ZipDepth Base NPU 896 x 512 macOS 15 alternate | Uses the same macOS 13-floor Core ML source | Targets macOS 15 | Loads on macOS 27 with output identical to the target-27 graph; macOS 15 execution remains untested |
 
 The Depth Anything graph conversion fails below macOS 27 because its generated
 `mps.instance_norm` operation has explicit `gamma`, `beta`, `mean`, and
@@ -41,10 +46,11 @@ The Depth Anything graph conversion fails below macOS 27 because its generated
 serialization restriction and does not apply to the Core ML packages.
 
 The released graph packages were tested only on macOS 27 where the manifest
-marks `runtime_tested` as true. ZipDepth's successful lower-target conversion
-has not yet been runtime-tested on macOS 15. An app targeting macOS 15 can
-continue to compile and use all fourteen Core ML packages; Xcode 27 is the
-tested conversion toolchain for reproducing the attached graph packages. See the
+marks a runtime test. This includes the macOS 15-targeted ZipDepth 896 x 512
+alternate, which produced output bit-identical to the target-27 graph. It has
+not yet been runtime-tested on macOS 15. An app targeting macOS 15 can continue
+to compile and use all fourteen Core ML packages; Xcode 27 is the tested
+conversion toolchain for reproducing the attached graph packages. See the
 [deployment compatibility report](https://github.com/jvcleave/DepthStudies/blob/main/studies/realtime-depth-macos27/compatibility.md)
 for the complete diagnostics, build-versus-runtime distinction, and reproduction
 command.

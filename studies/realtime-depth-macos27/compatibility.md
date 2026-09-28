@@ -6,8 +6,8 @@ This note separates three requirements that are easy to conflate:
 2. the Xcode toolchain used to convert that model into an `.mpsgraphpackage`; and
 3. the minimum macOS target encoded into the generated MPSGraph package.
 
-The macOS 27 restriction in this study belongs to the third item for the three
-Depth Anything graph packages. **All four released Core ML `.mlpackage` files
+The macOS 27 restriction in this study belongs to the third item for the Depth
+Anything graph packages. **All fourteen released Core ML `.mlpackage` files
 support macOS 15.** DA2 and ZipDepth were exported with `ct.target.iOS16`, which
 Core ML Tools aliases to macOS 13. DA3 was exported with `ct.target.iOS18`, which
 Core ML Tools aliases to macOS 15.
@@ -24,8 +24,9 @@ The conversion probes were run on 2026-09-25 with:
 
 The probes used the exact Core ML inputs identified by the weight hashes in the
 release manifest. A successful conversion means `mpsgraphtool` serialized a
-package. Runtime execution was tested only for the attached macOS 27 graph
-packages on an Apple M1 Max.
+package. Runtime execution was performed on an Apple M1 Max running macOS 27.
+The macOS 15-targeted ZipDepth 896 x 512 package was tested on that host for
+loading and output parity, not on its oldest encoded deployment target.
 
 | Model | Core ML export target | Core ML macOS floor | Graph target 27 | Graph target 26 | Graph target 15 | Lower-target graph runtime tested |
 | --- | --- | ---: | --- | --- | --- | --- |
@@ -33,6 +34,7 @@ packages on an Apple M1 Max.
 | Depth Anything 3 Small, 518 x 518 | `ct.target.iOS18` | macOS 15 | Passed | Failed | Failed | No |
 | Depth Anything 3 Small, 392 x 392 | `ct.target.iOS18` | macOS 15 | Passed | Failed | Failed | No |
 | ZipDepth Base NPU, 384 x 384 | `ct.target.iOS16` | macOS 13 | Passed | Passed | Passed | No |
+| ZipDepth Base NPU, 896 x 512 | `ct.target.iOS16` | macOS 13 | Passed | Not probed | Passed | On macOS 27 only; macOS 15 remains untested |
 
 The Core ML feature-target names above come directly from the exporters. Core ML
 Tools defines the iOS 16 specification version as the macOS 13 specification
@@ -52,9 +54,9 @@ not a fresh runtime test on each older OS release.
 - The attached Depth Anything `.mpsgraphpackage` assets encode a macOS 27
   minimum and must not be loaded on macOS 26 or earlier. That is a runtime
   requirement of these serialized graph artifacts.
-- ZipDepth can instead be serialized with a macOS 15 graph target. The release's
-  attached ZipDepth graph still encodes macOS 27 so it exactly matches the
-  benchmark build.
+- ZipDepth can instead be serialized with a macOS 15 graph target. The release
+  includes a separate macOS 15-targeted 896 x 512 package; the standard
+  ZipDepth graph assets retain the macOS 27 benchmark configuration.
 
 An application's Debug or Release configuration does not change these model
 targets. An app that continues to deploy to macOS 15 can use the Core ML assets
@@ -91,14 +93,23 @@ same instance-normalization representation and deployment restriction.
 
 ## Why ZipDepth is different
 
-ZipDepth converted successfully when `-minimumDeploymentTarget` was set to both
-26.0.0 and 15.0.0. It does not encounter the incompatible instance-normalization
-form in these conversions. The release contains its macOS 27 graph so all four
-benchmark artifacts share one build configuration; that choice is not a known
-ZipDepth requirement.
+ZipDepth 384 x 384 converted successfully when `-minimumDeploymentTarget` was
+set to both 26.0.0 and 15.0.0. ZipDepth 896 x 512 also converted successfully
+with target 15.0.0. It does not encounter the incompatible
+instance-normalization form in these conversions. The standard release graphs
+retain target 27 so benchmark artifacts share one build configuration; that
+choice is not a ZipDepth requirement.
 
-A ZipDepth graph serialized for macOS 15 still needs execution testing on the
-oldest claimed OS and hardware before it should be published as runtime-tested.
+The target-15 ZipDepth 896 x 512 graph loaded on macOS 27 and produced output
+bit-identical to the target-27 graph for the comparison harness input: maximum
+absolute error and normalized RMSE were both zero. Median graph-only execution
+was 5.88 ms for target 15 and 5.84 ms for target 27 over 30 alternating measured
+iterations after five warmups. This small single-run difference is not treated
+as a performance result. See the
+[raw comparison](compatibility/zipdepth-896x512-macos15-vs-macos27.json).
+
+The target-15 package still needs execution testing on macOS 15 and appropriate
+hardware before it should be described as runtime-tested on its oldest target.
 
 ## Reproducing the conversion boundary
 
@@ -126,7 +137,8 @@ The evidence supports four possible directions:
 
 - continue using the Core ML packages on the application's existing Core ML
   path and validate their own runtime floors separately;
-- use ZipDepth and produce a lower-target graph, followed by runtime testing;
+- use the attached lower-target ZipDepth graph and complete runtime testing on
+  macOS 15;
 - change the Depth Anything conversion so instance normalization is decomposed
   into older supported primitive operations before serialization; or
 - implement the affected normalization and surrounding graph directly with an

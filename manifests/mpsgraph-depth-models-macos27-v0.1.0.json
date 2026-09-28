@@ -496,6 +496,33 @@
           "minimum_macos_target": "27.0.0",
           "conversion_passed": true,
           "runtime_tested": true
+        },
+        {
+          "minimum_macos_target": "15.0.0",
+          "conversion_passed": true,
+          "runtime_tested": true,
+          "runtime_host_macos": "27.0 (26A428)",
+          "runtime_tested_on_minimum_target": false,
+          "comparison_to_primary": {
+            "report": "studies/realtime-depth-macos27/compatibility/zipdepth-896x512-macos15-vs-macos27.json",
+            "report_sha256": "6b649638fe301c479a1c29953dc3dd4a72012db00497cfadeee162744602ea28",
+            "maximum_absolute_error": 0,
+            "normalized_root_mean_square_error": 0,
+            "primary_median_milliseconds": 5.83575,
+            "alternate_median_milliseconds": 5.8769375,
+            "warmups": 5,
+            "iterations": 30
+          }
+        }
+      ],
+      "alternate_mpsgraph_release_assets": [
+        {
+          "minimum_macos_target": "15.0.0",
+          "release_asset": "ZipDepthBaseNPU896x512-macOS15.mpsgraphpackage.zip",
+          "release_asset_bytes": 11410747,
+          "release_asset_sha256": "906469e6fd7403be0e8351b63f605e018a52d630660d80e42a0f7bb9b06edd99",
+          "package_tree_sha256": "c2347a13c4e6a509a32ec1442528f75f59363176618f91f86b6529ea58168f60",
+          "runtime_tested_on_minimum_target": false
         }
       ]
     },

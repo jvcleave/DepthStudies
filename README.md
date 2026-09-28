@@ -129,6 +129,12 @@ packages. All fourteen Core ML packages support macOS 15: DA2 and ZipDepth
 declare the Core ML specification target corresponding to macOS 13, while DA3
 declares macOS 15.
 
+The release also includes a macOS 15-targeted serialization of the standard
+ZipDepth 896 x 512 graph. On macOS 27 it loaded successfully and produced output
+bit-identical to the macOS 27-targeted graph in the comparison harness. It has
+not yet been executed on macOS 15, so the encoded deployment target is verified
+while oldest-system runtime compatibility remains to be tested.
+
 ## Repository scope
 
 Large generated models live in GitHub releases. Git tracks the conversion recipe,

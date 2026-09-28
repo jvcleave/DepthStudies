@@ -71,8 +71,22 @@ MPSGRAPH_MINIMUM_TARGET=15.0.0 scripts/models/zipdepth/build_384.sh
 ```
 
 A macOS 15 package still needs execution testing on the oldest claimed system
-before being published with that compatibility claim. The released graph uses
-the macOS 27 benchmark configuration, but ZipDepth conversion itself does not
-require 27. See the
+before being described as runtime-tested there. The release includes a separate
+macOS 15-targeted 896 x 512 graph created from the same Core ML input as the
+macOS 27 artifact. Reproduce that conversion without rebuilding Core ML:
+
+```sh
+scripts/common/convert_coreml_to_mpsgraph.sh \
+  build/zipdepth-896x512/coreml/ZipDepthBaseNPU896x512.mlpackage \
+  build/zipdepth-896x512-macos15/mpsgraph \
+  ZipDepthBaseNPU896x512 \
+  15.0.0
+```
+
+On macOS 27, the lower-target package loaded successfully and was bit-identical
+to the macOS 27-targeted graph in the repository comparison harness. It has not
+yet been run on macOS 15. The standard released graphs retain the macOS 27
+benchmark configuration, but ZipDepth conversion itself does not require 27.
+See the
 [deployment compatibility report](../../../studies/realtime-depth-macos27/compatibility.md)
 for the tested conversion matrix.
