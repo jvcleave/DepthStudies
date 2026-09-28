@@ -33,7 +33,9 @@ controlled Release run. Every row uses the same prerecorded source and segment,
 output dimensions, 60 fps target, and one identical depth-consuming effect or
 preset. All other effects, foreground/person analysis, and face analysis are
 disabled. Each selection gets a fresh launch, a warm-up period, and a 60-second
-`CAPTURE LOG` window.
+`CAPTURE LOG` window. One `SNAP SHOT` is taken after stabilization while the
+capture remains active; its absolute PNG path is recorded as a
+`capture.snapshot` event for the corresponding example image.
 
 The package target is included because the standard ZipDepth 896 graph now
 targets macOS 15, while its FP16 comparison and the other graphs in this batch

@@ -136,6 +136,25 @@ def main() -> None:
     else:
         print("configuration: not_recorded")
 
+    snapshots = [
+        event.get("fields", {}) for event in events if event.get("name") == "capture.snapshot"
+    ]
+    if snapshots:
+        print("snapshots:")
+        for snapshot in snapshots:
+            path = snapshot.get("snapshot_path", "unknown")
+            elapsed = snapshot.get("elapsed_s")
+            width = snapshot.get("pixel_width")
+            height = snapshot.get("pixel_height")
+            details = [f"path={path}"]
+            if isinstance(elapsed, (int, float)):
+                details.append(f"elapsed_s={float(elapsed):.3f}")
+            if isinstance(width, int) and isinstance(height, int):
+                details.append(f"size={width}x{height}")
+            print(f"  {' '.join(details)}")
+    else:
+        print("snapshots: not_recorded")
+
     for metric in LATENCY_FROM_FPS_METRICS:
         print_latency_from_fps(rows, metric)
     for metric in RATE_METRICS:

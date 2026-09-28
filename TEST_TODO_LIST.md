@@ -14,8 +14,8 @@ saved.
 
 ## Test contract
 
-- [ ] Use a Release build from MESS app commit `d956b45736` and bundle commit
-  `08304c3`, or a later revision that retains the depth capture metadata and
+- [ ] Use a Release build from MESS app commit `b4628f1243` and bundle commit
+  `095b1d5`, or a later revision that retains the depth capture metadata and
   the macOS 15-compatible ZipDepth 896 graph.
 - [ ] Record the Mac model, macOS build, Xcode build, MESS app commit, bundle
   commit, output size, target FPS, source identity, source segment, and effect
@@ -30,6 +30,9 @@ saved.
 - [ ] Let the depth output and stats overlay stabilize before starting
   `CAPTURE LOG`.
 - [ ] Capture at least 30 seconds. Prefer 60 seconds when comparing p90 or p99.
+- [ ] Press `SNAP SHOT` once during the active capture after the output has
+  stabilized. Allow the PNG write to complete before stopping `CAPTURE LOG`.
+  New captures record the absolute PNG path in a `capture.snapshot` event.
 - [ ] Avoid changing effects, playback position, windows, or analysis settings
   during a capture.
 - [ ] Stop `CAPTURE LOG`, use `EXPORT LOG`, and save the exported directory
@@ -68,8 +71,8 @@ python3 scripts/summarize_capture.py /absolute/path/to/capture
 
 The summarizer prints the configuration event, capture completion state,
 dropped-event count, usable sample count, median and tail depth latency,
-presentation rate, and available foreground and face context. Missing metrics
-are reported without failing.
+presentation rate, captured snapshot paths, and available foreground and face
+context. Missing metrics are reported without failing.
 
 ## Workload definitions
 
@@ -112,9 +115,10 @@ macOS 27. All can be exercised by the same macOS 27 Release build.
 | M14 | `DEPTH ZIP1080 F16 GRAPH` | 1920 x 1088 | FP16 | macOS 27 | A11 |
 
 For each exported capture, record its M-number with the generated directory
-path. The `capture.configuration` event must agree with the intended row before
-the run is accepted. Completing a row under this contract also completes its
-referenced A/B checklist item; do not rerun it just to satisfy both sections.
+path. The `capture.configuration` event must agree with the intended row and
+the `capture.snapshot` event must point to the example PNG before the run is
+accepted. Completing a row under this contract also completes its referenced
+A/B checklist item; do not rerun it just to satisfy both sections.
 
 If time permits, repeat only close or surprising pairs in reverse order. That
 is more useful for checking thermal or run-order drift than immediately
