@@ -6,6 +6,7 @@ repo_root="$(cd "$script_dir/../../.." && pwd)"
 source_revision=91f3fd21e131641f51e8d35736d1958350180e3a
 source_url=https://github.com/fabiotosi92/ZipDepth.git
 checkpoint_sha256=627c04fda584133ead4310074884a4a037061b4c01ba86e73e492ea30fab570d
+input_representation="${ZIPDEPTH_INPUT_REPRESENTATION:-image-f32}"
 build_root="${ZIPDEPTH_BUILD_ROOT:-$repo_root/build/zipdepth}"
 source_root="${ZIPDEPTH_SOURCE_ROOT:-$build_root/source}"
 python_bin="${PYTHON_BIN:-python3.9}"
@@ -46,6 +47,17 @@ case "${ZIPDEPTH_VARIANT:-384}" in
         ;;
     *)
         echo "ZIPDEPTH_VARIANT must be 384, 512, 672x384, 896x512, 1536x864, or 1920x1088" >&2
+        exit 64
+        ;;
+esac
+case "$input_representation" in
+    image-f32)
+        ;;
+    tensor-f16)
+        model_name="${model_name}TensorF16"
+        ;;
+    *)
+        echo "ZIPDEPTH_INPUT_REPRESENTATION must be image-f32 or tensor-f16" >&2
         exit 64
         ;;
 esac
@@ -110,6 +122,7 @@ fi
     --checkpoint "$checkpoint_path" \
     --width "$model_width" \
     --height "$model_height" \
+    --input-representation "$input_representation" \
     --output "$model_path"
 
 "$repo_root/scripts/common/convert_coreml_to_mpsgraph.sh" \

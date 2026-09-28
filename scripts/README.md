@@ -9,6 +9,7 @@ Each model family owns its Core ML export and MPSGraph conversion entry point:
 - `models/zipdepth/build_512.sh`
 - `models/zipdepth/build_672x384.sh`
 - `models/zipdepth/build_896x512.sh`
+- `models/zipdepth/build_384_tensor_f16.sh` (experimental graph input)
 
 All three use `common/convert_coreml_to_mpsgraph.sh` only for the final conversion
 of one named `.mlpackage`. Source revisions, weights, patches, dependencies,
@@ -17,6 +18,9 @@ shapes, validation, and supported variants stay in the owning model directory.
 `tools/coreml-compute-plan/` contains the Swift command used to audit Core ML's
 anticipated per-operation compute placement for the optimization study. It is
 independent of the model-family conversion environments.
+
+`tools/mpsgraph-depth-compare/` compares graph output and graph-only execution
+time for fixed-shape FP32- and FP16-input depth packages on macOS 27.
 
 Generated files go under the ignored `build/` directory by default. Scripts
 refuse to replace existing model outputs so a previous validated artifact is not

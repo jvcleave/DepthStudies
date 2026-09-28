@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import coremltools as ct
+import numpy as np
 import torch
 
 
@@ -47,6 +48,15 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         required=True,
         help="Destination .mlpackage. The destination must not already exist.",
+    )
+    parser.add_argument(
+        "--input-representation",
+        choices=("image-f32", "tensor-f16"),
+        default="image-f32",
+        help=(
+            "Core ML input contract. image-f32 preserves the deployable image "
+            "package; tensor-f16 creates the graph-specific 0...255 planar tensor."
+        ),
     )
     return parser.parse_args()
 
@@ -132,6 +142,21 @@ def validate_inputs(args: argparse.Namespace) -> tuple[Path, Path]:
     return source_root, checkpoint_path
 
 
+class NormalizePixelTensor(torch.nn.Module):
+    """Keep 0...255 normalization inside the graph-specific tensor model."""
+
+    def __init__(self, model: torch.nn.Module) -> None:
+        super().__init__()
+        self.model = model
+        self.register_buffer(
+            "pixel_scale",
+            torch.tensor(1.0 / 255.0, dtype=torch.float32),
+        )
+
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
+        return self.model(image * self.pixel_scale)
+
+
 def main() -> None:
     args = parse_args()
     source_root, checkpoint_path = validate_inputs(args)
@@ -164,30 +189,18 @@ def main() -> None:
     fuse_remaining_conv_bn(model)
 
     torch.manual_seed(0)
-    example_input = torch.rand(
-        1,
-        3,
-        args.height,
-        args.width,
-        dtype=torch.float32,
-    )
-    with torch.no_grad():
-        example_output = model(example_input)
-    expected_output_shape = (1, 1, args.height, args.width)
-    if tuple(example_output.shape) != expected_output_shape:
-        raise ValueError(
-            f"Expected output shape {expected_output_shape}, got {tuple(example_output.shape)}."
+    if args.input_representation == "image-f32":
+        conversion_model = model
+        example_input = torch.rand(
+            1,
+            3,
+            args.height,
+            args.width,
+            dtype=torch.float32,
         )
-    if not torch.isfinite(example_output).all():
-        raise ValueError("ZipDepth produced nonfinite output before conversion.")
-
-    traced_model = torch.jit.trace(model, example_input)
-    mlmodel = ct.convert(
-        traced_model,
-        convert_to="mlprogram",
-        compute_precision=ct.precision.FLOAT16,
-        minimum_deployment_target=ct.target.iOS16,
-        inputs=[
+        with torch.no_grad():
+            example_output = conversion_model(example_input)
+        coreml_inputs = [
             ct.ImageType(
                 name="image",
                 shape=example_input.shape,
@@ -196,13 +209,63 @@ def main() -> None:
                 color_layout=ct.colorlayout.RGB,
                 channel_first=True,
             )
-        ],
-        outputs=[
+        ]
+        coreml_outputs = [
             ct.ImageType(
                 name="depth",
                 color_layout=ct.colorlayout.GRAYSCALE_FLOAT16,
             )
-        ],
+        ]
+    else:
+        pixel_input_float32 = torch.randint(
+            0,
+            256,
+            (1, 3, args.height, args.width),
+            dtype=torch.int32,
+        ).to(torch.float32)
+        with torch.no_grad():
+            reference_output = model(pixel_input_float32 * (1.0 / 255.0))
+        conversion_model = NormalizePixelTensor(model).eval()
+        example_input = pixel_input_float32
+        with torch.no_grad():
+            example_output = conversion_model(example_input)
+        difference = reference_output - example_output.float()
+        print(
+            "PyTorch tensor-wrapper validation: "
+            f"mae={difference.abs().mean().item():.9f}, "
+            f"max_abs={difference.abs().max().item():.9f}, "
+            f"rmse={difference.square().mean().sqrt().item():.9f}"
+        )
+        coreml_inputs = [
+            ct.TensorType(
+                name="image",
+                shape=example_input.shape,
+                dtype=np.float16,
+            )
+        ]
+        coreml_outputs = [
+            ct.TensorType(
+                name="depth",
+                dtype=np.float16,
+            )
+        ]
+
+    expected_output_shape = (1, 1, args.height, args.width)
+    if tuple(example_output.shape) != expected_output_shape:
+        raise ValueError(
+            f"Expected output shape {expected_output_shape}, got {tuple(example_output.shape)}."
+        )
+    if not torch.isfinite(example_output).all():
+        raise ValueError("ZipDepth produced nonfinite output before conversion.")
+
+    traced_model = torch.jit.trace(conversion_model, example_input)
+    mlmodel = ct.convert(
+        traced_model,
+        convert_to="mlprogram",
+        compute_precision=ct.precision.FLOAT16,
+        minimum_deployment_target=ct.target.iOS16,
+        inputs=coreml_inputs,
+        outputs=coreml_outputs,
     )
 
     mlmodel.author = "Fabio Tosi, Luca Bartolomei, Matteo Poggi, Stefano Mattoccia"
@@ -210,9 +273,14 @@ def main() -> None:
     mlmodel.short_description = (
         "ZipDepth base NPU export for MESS relative-depth evaluation."
     )
-    mlmodel.input_description["image"] = (
-        "RGB image scaled to [0, 1] by Core ML; ZipDepth applies ImageNet normalization."
-    )
+    if args.input_representation == "image-f32":
+        mlmodel.input_description["image"] = (
+            "RGB image scaled to [0, 1] by Core ML; ZipDepth applies ImageNet normalization."
+        )
+    else:
+        mlmodel.input_description["image"] = (
+            "Planar float16 RGB tensor in 0...255; scaling and ImageNet normalization are in the graph."
+        )
     mlmodel.output_description["depth"] = (
         "Single-channel half-float affine-invariant inverse-depth map."
     )
@@ -224,6 +292,9 @@ def main() -> None:
     mlmodel.user_defined_metadata["ZipDepthInputShape"] = (
         f"1x3x{args.height}x{args.width}"
     )
+    mlmodel.user_defined_metadata["ZipDepthInputRepresentation"] = (
+        args.input_representation
+    )
 
     output_path = args.output.expanduser().resolve()
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -231,7 +302,10 @@ def main() -> None:
     print(f"Saved {output_path}")
     print(f"Source revision: {EXPECTED_SOURCE_REVISION}")
     print(f"Checkpoint SHA-256: {EXPECTED_CHECKPOINT_SHA256}")
-    print(f"Input/output: RGB {args.width}x{args.height} -> grayscale float16 depth")
+    print(
+        f"Input/output: {args.input_representation} RGB "
+        f"{args.width}x{args.height} -> grayscale float16 depth"
+    )
 
 
 if __name__ == "__main__":

@@ -4,7 +4,8 @@
 MESS variants, and initial measurements exist. Milestone 1 is complete. Its
 [compute-plan findings](apple-silicon-depth-optimization/compute-plan-findings.md)
 defer the ZipDepth structural ablation because the current packages already
-show high Neural Engine placement. The FP16 MPSGraph input experiment is next.
+show high Neural Engine placement. Milestone 3 passed isolated validation and
+has an optional MESS engine; its [realtime comparison is pending](apple-silicon-depth-optimization/fp16-input-findings.md).
 
 ## Objective
 
@@ -190,16 +191,18 @@ cast without changing the Core ML image-input package used by the Core ML path.
 
 ### Actionable steps
 
-- [ ] Create a graph-specific ZipDepth export with a fixed-shape FP16 tensor
+- [x] Create a graph-specific ZipDepth export with a fixed-shape FP16 tensor
   input and normalization represented in the graph.
-- [ ] Add a corresponding Metal pack kernel that writes planar FP16 RGB.
+- [x] Add a corresponding Metal pack kernel that writes planar FP16 RGB.
 - [ ] Keep buffer layout, row order, color conversion, normalization constants,
-  and texture orientation explicit in the artifact manifest.
-- [ ] Compare output with the current FP32-input MPSGraph package on frozen
+  and texture orientation explicit in the artifact manifest. The experiment
+  record and package metadata are complete; the release manifest remains.
+- [x] Compare output with the current FP32-input MPSGraph package on frozen
   frames.
 - [ ] Measure pack, graph, unpack/upscale, complete depth-source time, and peak
-  working-set memory separately.
-- [ ] Test 384 x 384 first, then 896 x 512 if the small model shows a real
+  working-set memory separately. Graph-only timing is complete; the app capture
+  remains.
+- [x] Test 384 x 384 first, then 896 x 512 if the small model shows a real
   improvement.
 
 ### Gate
@@ -207,6 +210,15 @@ cast without changing the Core ML image-input package used by the Core ML path.
 Adopt the FP16 path only if output stays within the agreed tolerance, memory or
 bandwidth falls as expected, and complete depth-source latency improves. A cast
 removed from the graph is not by itself a successful result.
+
+### Current result
+
+The isolated candidate halved input-buffer bytes and reduced paired graph-only
+median time by 27.8–36.3% across three runs. Core ML and MPSGraph output checks
+passed. See the [FP16 input findings](apple-silicon-depth-optimization/fp16-input-findings.md).
+The complete MESS depth-source gate remains open and requires the controlled
+app runs above before the candidate can become a default or advance to
+896 x 512.
 
 ## Milestone 4: Fused attention for DA2 on the GPU
 

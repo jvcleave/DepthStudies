@@ -12,6 +12,30 @@ scripts/models/zipdepth/build_1536x864.sh
 scripts/models/zipdepth/build_1920x1088.sh
 ```
 
+The graph-specific FP16-input experiment has a separate entry point:
+
+```sh
+scripts/models/zipdepth/build_384_tensor_f16.sh
+```
+
+It creates `ZipDepthBaseNPU384x384TensorF16`: a planar FP16 NCHW input in the
+0...255 range with pixel scaling represented inside the model. The baseline
+Core ML image-input package remains unchanged. This artifact is experimental
+until its Core ML and MPSGraph outputs and complete pack/inference/unpack time
+have been compared with the baseline.
+
+Validate the Core ML candidate against the image-input baseline on three fixed
+inputs:
+
+```sh
+build/zipdepth/venv/bin/python scripts/models/zipdepth/validate_tensor_f16.py \
+  --baseline /path/to/ZipDepthBaseNPU384x384.mlpackage \
+  --candidate build/zipdepth-384-tensor-f16/coreml/ZipDepthBaseNPU384x384TensorF16.mlpackage \
+  --width 384 \
+  --height 384 \
+  --output build/zipdepth-384-tensor-f16/coreml-validation.json
+```
+
 All workflows pin and validate the upstream revision, NPU checkpoint SHA-256,
 Python versions, tensor shape, and conversion target. Running `build.sh`
 directly defaults to 384 x 384; `ZIPDEPTH_VARIANT` accepts `384`, `512`,

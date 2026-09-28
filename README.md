@@ -24,6 +24,8 @@ turns the initial results into staged Core ML residency, ZipDepth, and DA2
 experiments with explicit quality and performance gates. Its first
 [compute-plan audit](studies/apple-silicon-depth-optimization/compute-plan-findings.md)
 records anticipated CPU, GPU, and Neural Engine placement for six packages.
+The [ZipDepth FP16 input study](studies/apple-silicon-depth-optimization/fp16-input-findings.md)
+documents the first graph-specific candidate and the remaining realtime gate.
 
 Each model family has its own entry point. Depth Anything V2 carries its fixed
 source patch and exporter, DA3 pins the tagged conversion fork and its numerical
