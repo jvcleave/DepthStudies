@@ -73,24 +73,26 @@ active.
 ## Qualitative fixed-shape samples
 
 These user-supplied 1920 x 1080 MESS renders show the current fixed-shape model
-options. The four ZipDepth rows use ZipDepth Base NPU. The DA2 and DA3 rows use
+options. The five ZipDepth rows use ZipDepth Base NPU. The DA2 and DA3 rows use
 Depth Anything V2 Small and Depth Anything 3 Small, respectively. The rendered
 treatment, source material, and surrounding effect chain contribute to the
 visible result, so these are qualitative samples rather than controlled
 raw-depth accuracy comparisons.
 
-The capture filenames record the model family and fixed shape, but not the
-selected Core ML or MPSGraph backend. No backend comparison should be inferred
-from this set.
+The original six capture filenames record the model family and fixed shape, but
+not the selected Core ML or MPSGraph backend. The later 1920 x 1088 sample was
+explicitly recorded as MPSGraph. No backend comparison should be inferred from
+these rendered samples alone.
 
-| Model | Fixed shape | Model pixels | Sample |
-| --- | ---: | ---: | --- |
-| ZipDepth Base NPU | 384 x 384 | 147,456 | ![ZipDepth 384 x 384 sample](../../images/examples/zipdepth-384x384.png) |
-| ZipDepth Base NPU | 512 x 512 | 262,144 | ![ZipDepth 512 x 512 sample](../../images/examples/zipdepth-512x512.png) |
-| ZipDepth Base NPU | 672 x 384 | 258,048 | ![ZipDepth 672 x 384 sample](../../images/examples/zipdepth-672x384.png) |
-| ZipDepth Base NPU | 896 x 512 | 458,752 | ![ZipDepth 896 x 512 sample](../../images/examples/zipdepth-896x512.png) |
-| Depth Anything V2 Small | 448 x 336 | 150,528 | ![Depth Anything V2 448 x 336 sample](../../images/examples/da2-448x336.png) |
-| Depth Anything 3 Small | 518 x 518 | 268,324 | ![Depth Anything 3 518 x 518 sample](../../images/examples/da3-518x518.png) |
+| Model | Fixed shape | Model pixels | Backend | Sample |
+| --- | ---: | ---: | --- | --- |
+| ZipDepth Base NPU | 384 x 384 | 147,456 | Not recorded | ![ZipDepth 384 x 384 sample](../../images/examples/zipdepth-384x384.png) |
+| ZipDepth Base NPU | 512 x 512 | 262,144 | Not recorded | ![ZipDepth 512 x 512 sample](../../images/examples/zipdepth-512x512.png) |
+| ZipDepth Base NPU | 672 x 384 | 258,048 | Not recorded | ![ZipDepth 672 x 384 sample](../../images/examples/zipdepth-672x384.png) |
+| ZipDepth Base NPU | 896 x 512 | 458,752 | Not recorded | ![ZipDepth 896 x 512 sample](../../images/examples/zipdepth-896x512.png) |
+| ZipDepth Base NPU | 1920 x 1088 | 2,088,960 | MPSGraph | ![ZipDepth 1920 x 1088 MPSGraph sample](../../images/examples/zipdepth-1920x1088-mpsgraph.png) |
+| Depth Anything V2 Small | 448 x 336 | 150,528 | Not recorded | ![Depth Anything V2 448 x 336 sample](../../images/examples/da2-448x336.png) |
+| Depth Anything 3 Small | 518 x 518 | 268,324 | Not recorded | ![Depth Anything 3 518 x 518 sample](../../images/examples/da3-518x518.png) |
 
 ## Standalone DA2 compute-unit comparisons
 
