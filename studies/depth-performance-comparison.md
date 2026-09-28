@@ -10,7 +10,9 @@ before comparing values across sections.
 
 ## Realtime MESS captures
 
-All 11 checked-in realtime captures used MPSGraph and contained active
+### Earlier loaded MPSGraph captures
+
+The earlier 11 realtime captures used MPSGraph and contained active
 foreground and face-analysis timing. None is a CLEAN run under the current test
 contract. The table converts each sampled fps-equivalent depth metric back to
 milliseconds and then calculates percentiles. Model and complete depth-source
@@ -54,16 +56,32 @@ See the [first configured capture report](realtime-depth-macos27/loaded-fp16-com
 [second ZipDepth report](realtime-depth-macos27/loaded-zipdepth-batch-2-2026-09-28.md),
 and [test TODO list](../TEST_TODO_LIST.md) for the remaining controlled runs.
 
-### Clean Core ML validation
+### Controlled depth-only captures
 
-One snapshot-linked depth-only validation capture is checked in separately. It
-used DA3 392 x 392 through Core ML, recorded no foreground or face timing, and
-ended with zero dropped events. Its 23.47-second duration satisfies the current
-20-second acceptance minimum and completes the B01 checklist item.
+These ten accepted captures used the 20-second CLEAN contract. Every run ended
+normally with zero dropped events, recorded no foreground or face timing, and
+linked a valid 1920 x 1080 snapshot. Timing values are
+`median / p90 / p99`.
 
-| Capture | Shape | Backend | Duration / n | Model latency | Complete depth-source latency | Presentation median | Example |
+| Capture | Shape | Backend / input | Duration / n | Model latency | Complete depth-source latency | Presentation median | Example |
 | --- | ---: | --- | ---: | ---: | ---: | ---: | --- |
-| [DA3 392 clean](realtime-depth-macos27/captures/DA3_392x392_COREML_CLEAN) | 392 x 392 | Core ML | 23.47 s / 24 | 15.18 / 15.74 / 17.52 ms | 16.43 / 16.86 / 19.00 ms | 60.006 fps | [PNG](../images/examples/da3-392x392-coreml-clean.png) |
+| [DA3 392](realtime-depth-macos27/captures/DA3_392x392_COREML_CLEAN) | 392 x 392 | Core ML image | 23.47 s / 24 | 15.18 / 15.74 / 17.52 ms | 16.43 / 16.86 / 19.00 ms | 60.006 fps | [PNG](../images/examples/da3-392x392-coreml-clean.png) |
+| [ZipDepth 384](realtime-depth-macos27/captures/ZIP_384x384_COREML_CLEAN) | 384 x 384 | Core ML image | 33.90 s / 34 | 7.44 / 7.62 / 7.70 ms | 8.24 / 8.62 / 11.24 ms | 60.007 fps | [PNG](../images/examples/zipdepth-384x384-coreml-clean.png) |
+| [ZipDepth 384](realtime-depth-macos27/captures/ZIP_384x384_MPSGRAPH_FP32_CLEAN) | 384 x 384 | MPSGraph FP32 | 33.33 s / 34 | 5.63 / 6.09 / 6.35 ms | 5.78 / 6.44 / 7.20 ms | 59.995 fps | [PNG](../images/examples/zipdepth-384x384-mpsgraph-fp32-clean.png) |
+| [ZipDepth 384](realtime-depth-macos27/captures/ZIP_384x384_MPSGRAPH_FP16_CLEAN) | 384 x 384 | MPSGraph FP16 | 33.98 s / 34 | 6.14 / 6.91 / 7.28 ms | 6.37 / 6.80 / 7.01 ms | 59.996 fps | [PNG](../images/examples/zipdepth-384x384-mpsgraph-fp16-clean.png) |
+| [ZipDepth 512](realtime-depth-macos27/captures/ZIP_512x512_COREML_CLEAN) | 512 x 512 | Core ML image | 33.85 s / 34 | 9.65 / 10.33 / 10.58 ms | 11.29 / 12.27 / 12.52 ms | 60.003 fps | [PNG](../images/examples/zipdepth-512x512-coreml-clean.png) |
+| [ZipDepth 512](realtime-depth-macos27/captures/ZIP_512x512_MPSGRAPH_FP32_CLEAN) | 512 x 512 | MPSGraph FP32 | 34.36 s / 35 | 7.67 / 8.24 / 8.91 ms | 7.84 / 8.49 / 9.34 ms | 59.991 fps | [PNG](../images/examples/zipdepth-512x512-mpsgraph-fp32-clean.png) |
+| [ZipDepth 672](realtime-depth-macos27/captures/ZIP_672x384_COREML_CLEAN) | 672 x 384 | Core ML image | 32.62 s / 33 | 9.69 / 10.11 / 10.61 ms | 10.80 / 11.59 / 12.26 ms | 59.996 fps | [PNG](../images/examples/zipdepth-672x384-coreml-clean.png) |
+| [ZipDepth 1920](realtime-depth-macos27/captures/ZIP_1920x1088_COREML_CLEAN) | 1920 x 1088 | Core ML image | 33.80 s / 34 | 60.68 / 61.07 / 61.41 ms | 61.70 / 61.98 / 62.29 ms | 60.000 fps | [PNG](../images/examples/zipdepth-1920x1088-coreml-clean.png) |
+| [ZipDepth 1920](realtime-depth-macos27/captures/ZIP_1920x1088_MPSGRAPH_FP32_CLEAN) | 1920 x 1088 | MPSGraph FP32 | 33.47 s / 34 | 43.23 / 45.91 / 55.91 ms | 44.27 / 46.60 / 53.21 ms | 59.906 fps | [PNG](../images/examples/zipdepth-1920x1088-mpsgraph-fp32-clean.png) |
+| [ZipDepth 1920](realtime-depth-macos27/captures/ZIP_1920x1088_MPSGRAPH_FP16_CLEAN) | 1920 x 1088 | MPSGraph FP16 | 34.18 s / 34 | 43.63 / 46.09 / 47.73 ms | 44.86 / 46.44 / 47.17 ms | 59.429 fps | [PNG](../images/examples/zipdepth-1920x1088-mpsgraph-fp16-clean.png) |
+
+The clean comparisons currently favor MPSGraph FP32. It reduced median
+complete-path latency versus Core ML by `29.9%` at 384 x 384, `30.6%` at
+512 x 512, and `28.3%` at 1920 x 1088. FP16 was `10.2%` slower than FP32 at
+384 x 384 and effectively tied at 1920 x 1088, where its presentation median
+was lower. The duplicate 672 x 384 Core ML run was discarded; its MPSGraph
+control remains pending.
 
 ## Paired standalone experiments
 
@@ -122,7 +140,7 @@ comparison because its runtime state and protocol differ.
 
 ## Missing realtime rows
 
-No accepted configured realtime capture has yet been checked in for ZipDepth
-384 x 384, ZipDepth 1920 x 1088, DA3 518 x 518, or either DA3 MPSGraph shape.
-CLEAN FP32/FP16 pairs also remain pending. Those gaps stay explicit in the
+The remaining CLEAN realtime gaps are all DA2 routes, DA3 518 Core ML, both DA3
+MPSGraph shapes, ZipDepth 672 MPSGraph, every ZipDepth 896 route, and every
+ZipDepth 1536 route. Those gaps stay explicit in the
 [test TODO list](../TEST_TODO_LIST.md).

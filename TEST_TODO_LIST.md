@@ -142,11 +142,11 @@ with FP32, so the remaining hypothesis is cheaper packing and buffer traffic.
 
 ### ZipDepth at 384 x 384
 
-- [ ] **A04** — `DEPTH ZIP 384 GRAPH`, CLEAN.
-- [ ] **A05** — `DEPTH ZIP 384 F16 GRAPH`, CLEAN.
+- [x] **A04** — `DEPTH ZIP 384 GRAPH`, CLEAN.
+- [x] **A05** — `DEPTH ZIP 384 F16 GRAPH`, CLEAN.
 
-This is the strongest isolated FP16 candidate: graph-only median time improved
-by 27.8–36.3% across three paired runs.
+The controlled app result reversed the isolated result: FP16 increased median
+complete-path latency by `10.2%`. Prefer the FP32 graph at this shape.
 
 ### ZipDepth at 896 x 512
 
@@ -165,12 +165,13 @@ median, with worse p90 and p99. The CLEAN pair remains necessary.
 
 ### ZipDepth at 1920 x 1088
 
-- [ ] **A10** — `DEPTH ZIP 1080 GRAPH`, CLEAN.
-- [ ] **A11** — `DEPTH ZIP 1080 F16 GRAPH`, CLEAN.
+- [x] **A10** — `DEPTH ZIP 1080 GRAPH`, CLEAN.
+- [x] **A11** — `DEPTH ZIP 1080 F16 GRAPH`, CLEAN.
 
 The `ZIP 1080` label refers to the fixed 1920 x 1088 tensor. The graph-only
-1536 and 1920 pairs were tied; test them to quantify full-pipeline input traffic
-and the presentation cost of the large activations.
+1536 and 1920 pairs were tied. The controlled 1920 app pair was also close:
+FP16 increased median complete-path latency by `1.3%`, with an effectively tied
+p90 and lower presentation median. Prefer FP32 at this shape.
 
 ## Batch B: backend and resolution controls
 
@@ -194,10 +195,10 @@ so it completes B01 under the 20-second test contract.
 
 ### ZipDepth Core ML controls
 
-- [ ] **B05** — `DEPTH ZIP 384 CORE ML`, CLEAN.
+- [x] **B05** — `DEPTH ZIP 384 CORE ML`, CLEAN.
 - [ ] **B06** — `DEPTH ZIP 896 CORE ML`, CLEAN.
 - [ ] **B07** — `DEPTH ZIP 1536 CORE ML`, CLEAN.
-- [ ] **B08** — `DEPTH ZIP 1080 CORE ML`, CLEAN.
+- [x] **B08** — `DEPTH ZIP 1080 CORE ML`, CLEAN.
 
 ZipDepth Core ML retains the existing priority policy: it may use the
 CPU-plus-Neural-Engine model when depth is prioritized and the CPU-plus-GPU
@@ -206,11 +207,11 @@ these as application-policy measurements, not fixed-compute-unit benchmarks.
 
 ### ZipDepth resolution sweep
 
-- [ ] **B09** — `DEPTH ZIP 512 GRAPH`, CLEAN.
+- [x] **B09** — `DEPTH ZIP 512 GRAPH`, CLEAN.
 - [ ] **B10** — `DEPTH ZIP 672 GRAPH`, CLEAN.
-- [ ] **B11** — `DEPTH ZIP 512 CORE ML`, CLEAN, only if a full backend sweep is
+- [x] **B11** — `DEPTH ZIP 512 CORE ML`, CLEAN, only if a full backend sweep is
   still useful after B09.
-- [ ] **B12** — `DEPTH ZIP 672 CORE ML`, CLEAN, only if a full backend sweep is
+- [x] **B12** — `DEPTH ZIP 672 CORE ML`, CLEAN, only if a full backend sweep is
   still useful after B10.
 
 Compare 384 x 384, 512 x 512, 672 x 384, 896 x 512, 1536 x 864, and
@@ -220,6 +221,11 @@ do not currently have FP16-input graph variants.
 Initial LOADED observations are saved for 512 x 512 and 672 x 384. Both held a
 60 fps presentation median, but their competing foreground time differed, so
 they do not replace B09 and B10.
+
+The CLEAN 512 MPSGraph route reduced median complete-path latency by `30.6%`
+versus its Core ML control. The 672 batch contained two Core ML captures and no
+MPSGraph capture; the duplicate was discarded, B12 is complete, and B10 remains
+open.
 
 ## Batch C: representative loaded session
 
