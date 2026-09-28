@@ -26,9 +26,14 @@ one-package `mpsgraphtool` helper.
 
 ## Example frames
 
-These MESS frames show depth-driven contour treatments using two of the study
-models. They are qualitative examples rather than controlled raw-depth
+These MESS frames show depth-driven contour treatments using the study models.
+They are qualitative examples rather than controlled raw-depth
 comparisons; the surrounding effect chain contributes to the rendered image.
+
+A six-frame [fixed-shape sample set](studies/realtime-depth-macos27/findings.md#qualitative-fixed-shape-samples)
+also compares ZipDepth at 384 x 384, 512 x 512, 672 x 384, and 896 x 512 with
+DA2 at 448 x 336 and DA3 at 518 x 518. The sample filenames do not identify the
+Core ML or MPSGraph backend.
 
 ### Depth Anything V2 Small — Core ML
 
