@@ -33,6 +33,10 @@ The [DA2 FP16 input study](studies/apple-silicon-depth-optimization/da2-fp16-inp
 halves graph-input bytes with tied isolated execution and defines the remaining
 complete MESS comparison.
 
+Use the [realtime test TODO list](TEST_TODO_LIST.md) to batch the remaining MESS
+comparisons without mixing current app options with experiments that still need
+implementation.
+
 Each model family has its own entry point. Depth Anything V2 carries its fixed
 source patch and exporter, DA3 pins the tagged conversion fork and its numerical
 validator, and ZipDepth carries its pinned exporter. They share only the final
