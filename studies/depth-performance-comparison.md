@@ -66,14 +66,16 @@ timing, and linked a valid 1920 x 1080 snapshot. Timing values are
 #### Top performers
 
 The winner for each model and input shape is the backend with the lowest median
-complete depth-source latency. Latency is rounded to one decimal place. The
-macOS column gives the supported MESS app target for the selected artifact;
-all captures were measured on macOS 27. The [compatibility note](realtime-depth-macos27/compatibility.md)
+complete depth-source latency. DA2 also includes its best macOS 15-compatible
+route. Latency is rounded to one decimal place. The macOS column gives the
+supported MESS app target for the selected artifact; all captures were measured
+on macOS 27. The [compatibility note](realtime-depth-macos27/compatibility.md)
 separates model declarations, graph targets, and tested runtime versions.
 
 | Variant | Backend | Minimum macOS target | Latency | Example |
 | --- | --- | ---: | ---: | --- |
 | [Depth Anything V2 448 x 336](realtime-depth-macos27/captures/DA2_448x336_MPSGRAPH_FP32_CLEAN) | MPSGraph FP32 | 27+ | 15.4 ms | <img src="../images/examples/da2-448x336-mpsgraph-fp32-clean.png" width="240" alt="Depth Anything V2 448 x 336 MPSGraph FP32"> |
+| [Depth Anything V2 448 x 336](realtime-depth-macos27/captures/DA2_448x336_COREML_CLEAN) | Core ML | 15+ | 16.7 ms | <img src="../images/examples/da2-448x336-coreml-clean.png" width="240" alt="Depth Anything V2 448 x 336 Core ML"> |
 | [Depth Anything 3 Small 392 x 392](realtime-depth-macos27/captures/DA3_392x392_MPSGRAPH_FP32_CLEAN) | MPSGraph FP32 | 27+ | 15.5 ms | <img src="../images/examples/da3-392x392-mpsgraph-fp32-clean.png" width="240" alt="Depth Anything 3 Small 392 x 392 MPSGraph FP32"> |
 | [Depth Anything 3 Small 518 x 518](realtime-depth-macos27/captures/DA3_518x518_COREML_CLEAN) | Core ML | 15+ | 48.6 ms | <img src="../images/examples/da3-518x518-coreml-clean.png" width="240" alt="Depth Anything 3 Small 518 x 518 Core ML"> |
 | [ZipDepth 384 x 384](realtime-depth-macos27/captures/ZIP_384x384_MPSGRAPH_FP32_CLEAN) | MPSGraph FP32 | 27+ | 5.8 ms | <img src="../images/examples/zipdepth-384x384-mpsgraph-fp32-clean.png" width="240" alt="ZipDepth 384 x 384 MPSGraph FP32"> |
