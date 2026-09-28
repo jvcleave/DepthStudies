@@ -77,6 +77,12 @@ This 1920 x 1080 rendered frame uses the 1536 x 864 fixed model tensor.
 
 ![MESS frame using ZipDepth Base NPU at 1536 x 864 through MPSGraph](images/examples/zipdepth-1536x864-mpsgraph-readme.png)
 
+### ZipDepth Base NPU 1536 x 864 FP16 input — MPSGraph
+
+This 1920 x 1080 rendered frame uses the experimental planar FP16 graph input.
+
+![MESS frame using ZipDepth Base NPU at 1536 x 864 with an FP16 MPSGraph input](images/examples/zipdepth-1536x864-fp16-mpsgraph.png)
+
 ### ZipDepth Base NPU 1920 x 1088 — MPSGraph
 
 This 1920 x 1080 rendered frame uses the 1920 x 1088 fixed model tensor.
