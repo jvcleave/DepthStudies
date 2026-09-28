@@ -1,0 +1,53 @@
+{
+  "baseline" : {
+    "inputBytes" : 1806336,
+    "inputDataType" : "float32",
+    "packageName" : "DepthAnythingV2SmallRealtime.mpsgraphpackage",
+    "packageTreeSHA256" : "25ec48d8c3d5cafade6d81841c75f5a7ae3d85d03b4e62427e72715078ead773",
+    "timingsMilliseconds" : {
+      "maximum" : 12.44575,
+      "mean" : 11.900590380000004,
+      "median" : 11.8865835,
+      "minimum" : 11.530875,
+      "p90" : 12.121333400000001,
+      "p99" : 12.43848934
+    }
+  },
+  "candidate" : {
+    "inputBytes" : 1806336,
+    "inputDataType" : "float32",
+    "packageName" : "DepthAnythingV2SmallRealtimeSDPA.mpsgraphpackage",
+    "packageTreeSHA256" : "ea4e8a2473082be8714f0b6b066cedd86fc15aeaa567db1a5ef547a0fbdab291",
+    "timingsMilliseconds" : {
+      "maximum" : 12.935959,
+      "mean" : 12.37473169,
+      "median" : 12.38875,
+      "minimum" : 11.94675,
+      "p90" : 12.6170253,
+      "p99" : 12.77904301
+    }
+  },
+  "generatedAt" : "2026-09-28T07:19:45Z",
+  "host" : {
+    "gpu" : "Apple M1 Max",
+    "hardwareModel" : "Mac13,1",
+    "operatingSystem" : "Version 27.0 (Build 26A428)"
+  },
+  "iterations" : 100,
+  "quality" : {
+    "maximumAbsoluteError" : 0,
+    "meanAbsoluteError" : 0,
+    "minimumPSNRDecibels" : 241.56381027085166,
+    "normalizedRootMeanSquareError" : 0,
+    "passed" : true,
+    "rootMeanSquareError" : 0
+  },
+  "schemaVersion" : 1,
+  "shape" : [
+    1,
+    3,
+    336,
+    448
+  ],
+  "warmups" : 20
+}

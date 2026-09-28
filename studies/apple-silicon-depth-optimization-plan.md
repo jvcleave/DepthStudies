@@ -6,6 +6,8 @@ MESS variants, and initial measurements exist. Milestone 1 is complete. Its
 defer the ZipDepth structural ablation because the current packages already
 show high Neural Engine placement. Milestone 3 passed isolated validation and
 has an optional MESS engine; its [realtime comparison is pending](apple-silicon-depth-optimization/fp16-input-findings.md).
+Milestone 4 preserved native DA2 SDPA and exact FP16 output, but rejected the
+candidate because it was slower in paired Core ML and MPSGraph measurements.
 
 ## Objective
 
@@ -230,20 +232,22 @@ Core ML GPU or MPSGraph a better graph than DA2's decomposed attention sequence.
 
 ### Actionable steps
 
-- [ ] Patch an exporter-owned model copy rather than modifying the upstream DA2
+- [x] Patch an exporter-owned model copy rather than modifying the upstream DA2
   checkout in place.
-- [ ] Replace the explicit QK matrix multiplication, scaling, softmax, and AV
+- [x] Replace the explicit QK matrix multiplication, scaling, softmax, and AV
   matrix multiplication with PyTorch
   `scaled_dot_product_attention`, preserving QKV weights, head layout, scale,
   and inference-time dropout behavior.
-- [ ] Verify the patched PyTorch result against the baseline before conversion.
-- [ ] Convert the 448 x 336 model and inspect its MIL program.
-- [ ] Confirm that conversion retains native `scaled_dot_product_attention`
+- [x] Verify the patched PyTorch result against the baseline before conversion.
+- [x] Convert the 448 x 336 model and inspect its MIL program.
+- [x] Confirm that conversion retains native `scaled_dot_product_attention`
   instead of recreating the decomposed 24-matmul/12-softmax pattern.
-- [ ] Build the MPSGraph package and validate its output against Core ML and
+- [x] Build the MPSGraph package and validate its output against Core ML and
   PyTorch.
-- [ ] Measure complete depth-source time for Core ML CPU + GPU and MPSGraph.
-- [ ] Record graph-package size and initialization time as secondary metrics.
+- [x] Measure paired Core ML CPU plus GPU prediction and MPSGraph graph-only
+  execution before app integration.
+- [x] Record package size. Initialization timing was skipped after both primary
+  paths failed the performance gate.
 
 ### Gate
 
@@ -251,6 +255,43 @@ Advance only if the converted graph preserves fused attention, output quality
 does not regress, and end-to-end GPU execution improves. If Core ML decomposes
 the operator again or the fused graph does not win, record the result and stop
 without adding an app variant.
+
+### Outcome
+
+The conversion retained twelve native SDPA operations and eliminated the 24
+matrix multiplications and 12 softmax operations from decomposed attention.
+Core ML and MPSGraph outputs were exact in the fixed FP16-output comparisons.
+Despite that, the candidate was 2.2–3.4% slower by median through paired Core ML
+CPU plus GPU prediction and 4.0–4.5% slower by median through MPSGraph across
+three runs. The experiment therefore stopped before MESS integration. See the
+[DA2 SDPA findings](apple-silicon-depth-optimization/da2-sdpa-findings.md).
+
+## Milestone 4A: FP16 tensor ingress for DA2 and DA3 MPSGraph
+
+**Goal:** apply the successful ZipDepth input-traffic technique to the two
+Depth Anything families without changing their attention implementations.
+
+### Actionable steps
+
+- [ ] Start with DA2 448 x 336. Add a graph-specific FP16 planar tensor input
+  while preserving 0...255 RGB ingress and the existing ImageNet normalization.
+- [ ] Validate the FP16-input Core ML export against the current image-input
+  package on deterministic fixtures, then compare the two graph packages.
+- [ ] Confirm that MESS can reuse the existing FP16 planar Metal pack path
+  without adding a family-specific copy or synchronization point.
+- [ ] Measure input bytes, graph-only median/p90/p99, and complete depth-source
+  time before exposing an optional app variant.
+- [ ] Repeat the same isolated process for DA3 392 x 392 first. Try 518 x 518
+  only if the smaller package passes because the current 518 MPSGraph baseline
+  is already substantially slower than Core ML.
+- [ ] Keep DA2 classic attention and DA3's existing native SDPA fixed so the
+  input contract is the only experimental variable.
+
+### Gate
+
+Advance each family independently only when numerical validation passes and
+the complete MESS depth-source measurement improves. Do not infer a DA3 win
+from DA2 or from the earlier ZipDepth result.
 
 ## Milestone 5: Controlled MESS trials
 
@@ -302,7 +343,9 @@ Run the work in this order:
 3. the winning ZipDepth Neural Engine candidate at 1536 x 864, if one exists;
 4. ZipDepth MPSGraph FP16 input;
 5. DA2 fused attention;
-6. controlled app integration and release.
+6. DA2 MPSGraph FP16 input;
+7. DA3 392 x 392 MPSGraph FP16 input;
+8. controlled app integration and release for isolated winners.
 
 The order prevents app code and settings from multiplying before the model
 experiment proves useful. It also separates Neural Engine authoring choices

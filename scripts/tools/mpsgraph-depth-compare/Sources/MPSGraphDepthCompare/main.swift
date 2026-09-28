@@ -56,10 +56,23 @@ private struct Arguments
     let height: Int
     let warmups: Int
     let iterations: Int
+    let baselineInputDataType: InputDataType
+    let candidateInputDataType: InputDataType
 
     static func parse(_ values: [String]) throws -> Arguments
     {
         var strings: [String: String] = [:]
+        let validKeys: Set<String> = [
+            "--baseline",
+            "--candidate",
+            "--output",
+            "--width",
+            "--height",
+            "--warmups",
+            "--iterations",
+            "--baseline-input-data-type",
+            "--candidate-input-data-type",
+        ]
         var index = 0
         while index < values.count
         {
@@ -70,6 +83,8 @@ private struct Arguments
             }
             guard key.hasPrefix("--"), index + 1 < values.count
             else { throw CompareError.usage("Invalid arguments\n\n\(usage)") }
+            guard validKeys.contains(key)
+            else { throw CompareError.usage("Unknown argument: \(key)\n\n\(usage)") }
             strings[key] = values[index + 1]
             index += 2
         }
@@ -82,6 +97,14 @@ private struct Arguments
         else { throw CompareError.usage("Missing a required argument\n\n\(usage)") }
         let warmups = strings["--warmups"].flatMap(Int.init) ?? 5
         let iterations = strings["--iterations"].flatMap(Int.init) ?? 30
+        let baselineInputDataType = try parseInputDataType(
+            strings["--baseline-input-data-type"] ?? "float32",
+            option: "--baseline-input-data-type"
+        )
+        let candidateInputDataType = try parseInputDataType(
+            strings["--candidate-input-data-type"] ?? "float16",
+            option: "--candidate-input-data-type"
+        )
         guard width > 0, height > 0, warmups >= 0, iterations > 0
         else { throw CompareError.usage("Dimensions and iterations must be positive") }
 
@@ -101,8 +124,20 @@ private struct Arguments
             width: width,
             height: height,
             warmups: warmups,
-            iterations: iterations
+            iterations: iterations,
+            baselineInputDataType: baselineInputDataType,
+            candidateInputDataType: candidateInputDataType
         )
+    }
+
+    private static func parseInputDataType(
+        _ rawValue: String,
+        option: String
+    ) throws -> InputDataType
+    {
+        guard let inputDataType = InputDataType(rawValue: rawValue)
+        else { throw CompareError.usage("\(option) must be float32 or float16") }
+        return inputDataType
     }
 
     static let usage = """
@@ -112,6 +147,8 @@ private struct Arguments
         --candidate /path/to/Float16Input.mpsgraphpackage \\
         --width 384 --height 384 \\
         --output /path/to/report.json \\
+        [--baseline-input-data-type float32] \\
+        [--candidate-input-data-type float16] \\
         [--warmups 5] [--iterations 30]
     """
 }
@@ -292,14 +329,14 @@ private enum MPSGraphDepthCompareMain
             else { throw CompareError.unavailable("Metal is unavailable") }
             let baseline = try GraphRunner(
                 packageURL: arguments.baselineURL,
-                inputDataType: .float32,
+                inputDataType: arguments.baselineInputDataType,
                 width: arguments.width,
                 height: arguments.height,
                 device: device
             )
             let candidate = try GraphRunner(
                 packageURL: arguments.candidateURL,
-                inputDataType: .float16,
+                inputDataType: arguments.candidateInputDataType,
                 width: arguments.width,
                 height: arguments.height,
                 device: device
@@ -356,15 +393,15 @@ private enum MPSGraphDepthCompareMain
                 baseline: GraphResult(
                     packageName: arguments.baselineURL.lastPathComponent,
                     packageTreeSHA256: try treeSHA256(at: arguments.baselineURL),
-                    inputDataType: .float32,
-                    inputBytes: pixelCount * 3 * MemoryLayout<Float>.size,
+                    inputDataType: arguments.baselineInputDataType,
+                    inputBytes: pixelCount * 3 * arguments.baselineInputDataType.byteCount,
                     timingsMilliseconds: summarize(baselineTimings)
                 ),
                 candidate: GraphResult(
                     packageName: arguments.candidateURL.lastPathComponent,
                     packageTreeSHA256: try treeSHA256(at: arguments.candidateURL),
-                    inputDataType: .float16,
-                    inputBytes: pixelCount * 3 * MemoryLayout<Float16>.size,
+                    inputDataType: arguments.candidateInputDataType,
+                    inputBytes: pixelCount * 3 * arguments.candidateInputDataType.byteCount,
                     timingsMilliseconds: summarize(candidateTimings)
                 ),
                 quality: quality

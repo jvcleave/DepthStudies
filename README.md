@@ -26,6 +26,9 @@ experiments with explicit quality and performance gates. Its first
 records anticipated CPU, GPU, and Neural Engine placement for six packages.
 The [ZipDepth FP16 input study](studies/apple-silicon-depth-optimization/fp16-input-findings.md)
 documents the first graph-specific candidate and the remaining realtime gate.
+The [DA2 native SDPA study](studies/apple-silicon-depth-optimization/da2-sdpa-findings.md)
+records a conversion-correct but slower fused-attention experiment and keeps
+classic decomposed attention as the selected implementation.
 
 Each model family has its own entry point. Depth Anything V2 carries its fixed
 source patch and exporter, DA3 pins the tagged conversion fork and its numerical

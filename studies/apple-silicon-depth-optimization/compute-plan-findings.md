@@ -82,9 +82,10 @@ Compute placement alone does not explain that shape-dependent MPSGraph result.
 2. Continue with the graph-specific FP16-input experiment. It targets known
    FP32 pack traffic and a cast in the MPSGraph path, independent of Core ML's
    Neural Engine placement.
-3. Continue with DA2 fused attention as a GPU experiment, while treating it as
-   speculative until the converter preserves the fused operator and an actual
-   benchmark improves.
+3. The DA2 fused-attention experiment is complete. Conversion preserved all
+   twelve native SDPA operations, but paired Core ML and MPSGraph measurements
+   were slower, so the candidate was rejected. See the
+   [DA2 SDPA findings](da2-sdpa-findings.md).
 4. Keep measured runtime results authoritative when they disagree with
    compute-plan implications.
 

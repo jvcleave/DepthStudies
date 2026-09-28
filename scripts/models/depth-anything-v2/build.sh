@@ -16,7 +16,19 @@ venv_dir="${DA2_VENV_DIR:-$build_root/venv}"
 coreml_dir="$build_root/coreml"
 graph_dir="$build_root/mpsgraph"
 download_dir="$build_root/downloads"
-model_name=DepthAnythingV2SmallRealtime
+attention_implementation="${DA2_ATTENTION_IMPLEMENTATION:-decomposed}"
+case "$attention_implementation" in
+    decomposed)
+        model_name=DepthAnythingV2SmallRealtime
+        ;;
+    sdpa)
+        model_name=DepthAnythingV2SmallRealtimeSDPA
+        ;;
+    *)
+        echo "DA2_ATTENTION_IMPLEMENTATION must be decomposed or sdpa" >&2
+        exit 64
+        ;;
+esac
 model_path="$coreml_dir/$model_name.mlpackage"
 checkpoint_path="${DA2_CHECKPOINT:-$download_dir/depth_anything_v2_vits.pth}"
 created_source=0
@@ -102,6 +114,7 @@ PYTHONPATH="$source_root" "$venv_dir/bin/python" "$script_dir/export_coreml.py" 
     --compute-precision float16 \
     --pos-embed-interpolation bilinear \
     --model-semantics optimized \
+    --attention-implementation "$attention_implementation" \
     --output "$model_path"
 
 "$repo_root/scripts/common/convert_coreml_to_mpsgraph.sh" \

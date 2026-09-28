@@ -1,8 +1,9 @@
 # MPSGraph depth comparison
 
 This macOS 27 command compares the output and graph-only execution time of two
-fixed-shape depth graph packages. The current experiment uses a planar FP32
-0...255 baseline and a planar FP16 0...255 candidate.
+fixed-shape depth graph packages. It defaults to a planar FP32 0...255 baseline
+and a planar FP16 0...255 candidate. Use `--candidate-input-data-type float32`
+when both graph packages retain the image-input conversion contract.
 
 ```sh
 swift build \

@@ -5,6 +5,31 @@ its macOS MPSGraph package. It pins the upstream Git revision, Hugging Face
 weight revision and SHA-256, Python package versions, fixed source patch, tensor
 shape, and macOS graph target.
 
+`build_sdpa.sh` creates the separate GPU-oriented
+`DepthAnythingV2SmallRealtimeSDPA` experiment. It replaces the twelve
+decomposed attention blocks in memory with PyTorch scaled dot-product attention
+without modifying the pinned source checkout. The baseline build remains the
+default. The SDPA package uses the iOS 18 Core ML operator set, corresponding to
+macOS 15, so conversion can retain the native attention operation.
+
+After building both variants, validate their Core ML outputs on the same
+deterministic RGB fixtures:
+
+```sh
+build/depth-anything-v2/venv/bin/python \
+  scripts/models/depth-anything-v2/validate_sdpa.py \
+  --baseline build/depth-anything-v2/coreml/DepthAnythingV2SmallRealtime.mlpackage \
+  --candidate build/depth-anything-v2-sdpa/coreml/DepthAnythingV2SmallRealtimeSDPA.mlpackage \
+  --warmups 20 \
+  --iterations 100 \
+  --output build/depth-anything-v2-sdpa/coreml-validation.json
+```
+
+The validator checks three deterministic images, then records a paired CPU plus
+GPU prediction comparison with alternating package order. This timing includes
+Core ML prediction and Python/Pillow image bridging, so use it only as a paired
+comparison between the two packages.
+
 By default it creates a disposable pinned checkout under
 `build/depth-anything-v2/source`. To use the established local source home:
 

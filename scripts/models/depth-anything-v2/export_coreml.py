@@ -1,6 +1,7 @@
 import argparse
 import math
 import types
+from collections import Counter
 from pathlib import Path
 
 import coremltools as ct
@@ -163,6 +164,12 @@ def parse_args() -> argparse.Namespace:
         choices=["optimized", "stock"],
         help="Use the current optimized export path or a stock-semantics path for comparison.",
     )
+    parser.add_argument(
+        "--attention-implementation",
+        default="decomposed",
+        choices=["decomposed", "sdpa"],
+        help="Keep the source attention sequence or replace it in memory with native SDPA.",
+    )
     return parser.parse_args()
 
 
@@ -238,6 +245,56 @@ def precompute_bicubic_positional_embedding(
     )
 
 
+def install_sdpa_attention(model: DepthAnythingV2) -> int:
+    from depth_anything_v2.dinov2_layers.attention import Attention
+
+    def sdpa_forward(attention: Attention, x: torch.Tensor) -> torch.Tensor:
+        batch_size, token_count, channel_count = x.shape
+        head_dimension = channel_count // attention.num_heads
+        expected_scale = head_dimension**-0.5
+        if not math.isclose(attention.scale, expected_scale):
+            raise ValueError(
+                "Native DA2 SDPA export requires the default inverse-square-root attention scale"
+            )
+        qkv = attention.qkv(x).reshape(
+            batch_size,
+            token_count,
+            3,
+            attention.num_heads,
+            head_dimension,
+        )
+        qkv = qkv.permute(2, 0, 3, 1, 4)
+        query, key, value = qkv.unbind(0)
+        x = F.scaled_dot_product_attention(
+            query,
+            key,
+            value,
+            dropout_p=0.0,
+            is_causal=False,
+        )
+        x = x.transpose(1, 2).reshape(batch_size, token_count, channel_count)
+        x = attention.proj(x)
+        return attention.proj_drop(x)
+
+    attention_count = 0
+    for module in model.modules():
+        if isinstance(module, Attention):
+            module.forward = types.MethodType(sdpa_forward, module)
+            attention_count += 1
+    if attention_count == 0:
+        raise ValueError("DA2 model did not contain any attention modules")
+    return attention_count
+
+
+def operation_inventory(mlmodel: ct.models.MLModel) -> Counter[str]:
+    counts: Counter[str] = Counter()
+    specification = mlmodel.get_spec()
+    for function in specification.mlProgram.functions.values():
+        for block in function.block_specializations.values():
+            counts.update(operation.type for operation in block.operations)
+    return counts
+
+
 def main() -> None:
     args = parse_args()
 
@@ -255,18 +312,43 @@ def main() -> None:
         else CoreMLDepthAnythingV2(model).eval()
     )
 
+    torch.manual_seed(0)
     example_input = torch.rand(1, 3, args.height, args.width, dtype=torch.float32)
+    with torch.no_grad():
+        reference_output = wrapped_model(example_input)
+    if args.attention_implementation == "sdpa":
+        attention_count = install_sdpa_attention(model)
+        with torch.no_grad():
+            candidate_output = wrapped_model(example_input)
+        difference = reference_output - candidate_output
+        maximum_absolute_error = difference.abs().max().item()
+        root_mean_square_error = difference.square().mean().sqrt().item()
+        reference_peak = max(reference_output.abs().max().item(), 1e-12)
+        normalized_root_mean_square_error = root_mean_square_error / reference_peak
+        print(
+            "PyTorch SDPA validation: "
+            f"attention_modules={attention_count}, "
+            f"max_abs={maximum_absolute_error:.9f}, "
+            f"normalized_rmse={normalized_root_mean_square_error:.9f}"
+        )
+        if maximum_absolute_error > 1e-5 or normalized_root_mean_square_error > 1e-5:
+            raise ValueError("DA2 SDPA rewrite exceeded the PyTorch equivalence threshold")
     traced_model = torch.jit.trace(wrapped_model, example_input)
 
     compute_precision = (
         ct.precision.FLOAT16 if args.compute_precision == "float16" else ct.precision.FLOAT32
     )
 
+    minimum_deployment_target = (
+        ct.target.iOS18
+        if args.attention_implementation == "sdpa"
+        else ct.target.iOS16
+    )
     mlmodel = ct.convert(
         traced_model,
         convert_to="mlprogram",
         compute_precision=compute_precision,
-        minimum_deployment_target=ct.target.iOS16,
+        minimum_deployment_target=minimum_deployment_target,
         inputs=[
             ct.ImageType(
                 name="image",
@@ -292,6 +374,24 @@ def main() -> None:
         "RGB image input scaled to [0, 1] by Core ML, then normalized with ImageNet mean/std."
     )
     mlmodel.output_description["depth"] = "Single-channel half-float relative depth map."
+    mlmodel.user_defined_metadata["DA2AttentionImplementation"] = (
+        args.attention_implementation
+    )
+
+    operation_counts = operation_inventory(mlmodel)
+    if args.attention_implementation == "sdpa":
+        if operation_counts["scaled_dot_product_attention"] != attention_count:
+            raise ValueError(
+                "Core ML conversion did not preserve all DA2 attention blocks as native SDPA"
+            )
+        if operation_counts["matmul"] != 0 or operation_counts["softmax"] != 0:
+            raise ValueError("Core ML conversion decomposed one or more DA2 attention blocks")
+    print(
+        "Core ML attention inventory: "
+        f"scaled_dot_product_attention={operation_counts['scaled_dot_product_attention']}, "
+        f"matmul={operation_counts['matmul']}, "
+        f"softmax={operation_counts['softmax']}"
+    )
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     mlmodel.save(str(args.output))
