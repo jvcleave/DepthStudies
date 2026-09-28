@@ -202,8 +202,7 @@ cast without changing the Core ML image-input package used by the Core ML path.
 - [ ] Measure pack, graph, unpack/upscale, complete depth-source time, and peak
   working-set memory separately. Graph-only timing is complete; the app capture
   remains.
-- [x] Test 384 x 384 first, then 896 x 512 if the small model shows a real
-  improvement.
+- [x] Test 384 x 384 first, followed by 896 x 512, 1536 x 864, and 1920 x 1088.
 
 ### Gate
 
@@ -215,11 +214,14 @@ removed from the graph is not by itself a successful result.
 
 At 384 x 384, the isolated candidate halved input-buffer bytes and reduced
 paired graph-only median time by 27.8–36.3% across three runs. At 896 x 512,
-input bytes were also halved, but graph-only execution was effectively tied.
-Core ML and MPSGraph output checks passed at both shapes. See the
+1536 x 864, and 1920 x 1088, input bytes were also halved, but graph-only
+execution was effectively tied. Core ML and MPSGraph output checks passed at
+all four shapes. An initial user-run 896 x 512 MESS comparison reported a
+substantial improvement, so the larger variants are available for the same
+complete-pipeline test. See the
 [FP16 input findings](apple-silicon-depth-optimization/fp16-input-findings.md).
-The complete MESS depth-source gate remains open and requires controlled app
-runs before either candidate can become a default.
+The documented MESS depth-source gate remains open until comparable diagnostics
+are captured; no FP16 candidate becomes a default from graph-only timing.
 
 ## Milestone 4: Fused attention for DA2 on the GPU
 

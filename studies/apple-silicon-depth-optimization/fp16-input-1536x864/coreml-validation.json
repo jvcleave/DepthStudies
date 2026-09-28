@@ -1,0 +1,76 @@
+{
+  "baseline": "ZipDepthBaseNPU1536x864.mlpackage",
+  "candidate": "ZipDepthBaseNPU1536x864TensorF16.mlpackage",
+  "compute_units": "CPU_AND_GPU",
+  "coremltools_version": "9.0",
+  "generated_at": "2026-09-28T06:48:47.867578+00:00",
+  "host": {
+    "machine": "arm64",
+    "macos": "27.0"
+  },
+  "input_shape": [
+    1,
+    3,
+    864,
+    1536
+  ],
+  "passed": true,
+  "samples": [
+    {
+      "baseline_range": [
+        0.0011816024780273438,
+        0.08526611328125
+      ],
+      "candidate_range": [
+        0.0011730194091796875,
+        0.085205078125
+      ],
+      "mae": 2.7768661311711185e-05,
+      "maximum_absolute_error": 0.0002593994140625,
+      "name": "gradient",
+      "normalized_rmse": 0.00046056564483970254,
+      "passed": true,
+      "psnr_db": 66.61295991371064,
+      "rmse": 3.927064244635403e-05
+    },
+    {
+      "baseline_range": [
+        0.0204010009765625,
+        0.0966796875
+      ],
+      "candidate_range": [
+        0.0204010009765625,
+        0.0966796875
+      ],
+      "mae": 0.0,
+      "maximum_absolute_error": 0.0,
+      "name": "checker",
+      "normalized_rmse": 0.0,
+      "passed": true,
+      "psnr_db": 217.64806412257784,
+      "rmse": 0.0
+    },
+    {
+      "baseline_range": [
+        0.004566192626953125,
+        0.06561279296875
+      ],
+      "candidate_range": [
+        0.00453948974609375,
+        0.065673828125
+      ],
+      "mae": 2.3465017875423655e-05,
+      "maximum_absolute_error": 0.000244140625,
+      "name": "random-seed-0",
+      "normalized_rmse": 0.0005158111660979515,
+      "passed": true,
+      "psnr_db": 65.12364437946725,
+      "rmse": 3.384381125215441e-05
+    }
+  ],
+  "schema_version": 1,
+  "thresholds": {
+    "maximum_absolute_error": 0.0005,
+    "maximum_normalized_rmse": 0.002
+  }
+}

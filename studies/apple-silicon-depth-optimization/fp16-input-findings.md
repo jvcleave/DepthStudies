@@ -1,8 +1,9 @@
 # ZipDepth FP16 MPSGraph Input Findings
 
-**Status:** Isolated validation passed at 384 x 384 and 896 x 512 on 2026-09-28.
-The optional MESS variants build successfully; realtime app comparison remains
-pending.
+**Status:** Isolated validation passed at 384 x 384, 896 x 512, 1536 x 864, and
+1920 x 1088 on 2026-09-28. The optional MESS variants build successfully. An
+initial user-run 896 x 512 MESS comparison reported a substantial improvement;
+the detailed realtime capture remains pending.
 
 ## 384 x 384 change
 
@@ -94,16 +95,45 @@ which require the complete MESS measurement. See the
 [raw Core ML report](fp16-input-896x512/coreml-validation.json) and adjacent
 MPSGraph reports.
 
+## High-resolution results
+
+The FP16 input export was also applied at 1536 x 864 and 1920 x 1088. Both use
+the same pinned weights as their FP32-input baselines.
+
+| Shape | FP32 input bytes | FP16 input bytes | Core ML maximum absolute error | Core ML maximum normalized RMSE |
+| --- | ---: | ---: | ---: | ---: |
+| 1536 x 864 | 15,925,248 | 7,962,624 | 0.000259 | 0.000516 |
+| 1920 x 1088 | 25,067,520 | 12,533,760 | 0.000305 | 0.000576 |
+
+Both passed the established numerical thresholds. Their paired graph-only
+execution was effectively tied, as it was at 896 x 512:
+
+| Shape | Run | Iterations | FP32 median | FP16 median | FP32 p90 | FP16 p90 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1536 x 864 | [1](fp16-input-1536x864/mpsgraph-comparison-run1.json) | 200 | 14.95 ms | 14.95 ms | 18.36 ms | 18.76 ms |
+| 1536 x 864 | [2](fp16-input-1536x864/mpsgraph-comparison-run2.json) | 100 | 15.29 ms | 15.46 ms | 20.15 ms | 18.78 ms |
+| 1536 x 864 | [3](fp16-input-1536x864/mpsgraph-comparison-run3.json) | 100 | 14.78 ms | 14.68 ms | 18.13 ms | 18.01 ms |
+| 1920 x 1088 | [1](fp16-input-1920x1088/mpsgraph-comparison-run1.json) | 200 | 21.93 ms | 21.90 ms | 24.74 ms | 25.29 ms |
+| 1920 x 1088 | [2](fp16-input-1920x1088/mpsgraph-comparison-run2.json) | 100 | 21.85 ms | 22.00 ms | 24.87 ms | 25.82 ms |
+| 1920 x 1088 | [3](fp16-input-1920x1088/mpsgraph-comparison-run3.json) | 100 | 22.19 ms | 21.91 ms | 25.61 ms | 25.52 ms |
+
+The graph comparisons passed too. At 1536 x 864, maximum absolute error was
+`0.000366` and normalized RMSE was `0.000681`. At 1920 x 1088, they were
+`0.000397` and `0.000682`. See the raw Core ML reports in
+[fp16-input-1536x864](fp16-input-1536x864/coreml-validation.json) and
+[fp16-input-1920x1088](fp16-input-1920x1088/coreml-validation.json).
+
 ## MESS integration
 
-MESS now has optional graph-only `ZIP 384 F16` and `ZIP 896 F16` engines. Their
-Metal pack kernel writes FP16 planar values directly. `MessDepthEngineKit`
-allocates each input buffer and constructs its graph tensor from the model's
-declared input data type. The candidates are not offered as Core ML engines
-because the existing Core ML backend accepts image input.
+MESS now has optional graph-only `ZIP 384 F16`, `ZIP 896 F16`, `ZIP 1536 F16`,
+and `ZIP 1080 F16` engines. Their Metal pack kernel writes FP16 planar values
+directly. `MessDepthEngineKit` allocates each input buffer and constructs its
+graph tensor from the model's declared input data type. The candidates are not
+offered as Core ML engines because the existing Core ML backend accepts image
+input.
 
-The workspace Debug build passed and generated the candidate
-`.mpsgraphpackage`; the app was not launched during implementation.
+The workspace Debug build passed and generated the candidate graph packages;
+the app was not launched during implementation.
 
 ## Required realtime comparison
 
@@ -117,6 +147,9 @@ effect settings, using a separate app launch for each engine:
 4. Repeat the same pair for `ZIP 896 GRAPH` and `ZIP 896 F16 GRAPH`; the 896
    graph-only result was tied, so this pair specifically tests pack cost and
    complete depth-source latency.
+5. Compare `ZIP 1536 GRAPH` with `ZIP 1536 F16 GRAPH`, then `ZIP 1080 GRAPH`
+   with `ZIP 1080 F16 GRAPH`. These larger pairs test whether the observed 896
+   application-level improvement grows with input-buffer size.
 
 For each run, allow warmup to finish and collect at least 30 seconds of the
 diagnostic stream. Record median/p90 depth model time, complete depth-source
