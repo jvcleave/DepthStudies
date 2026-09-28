@@ -24,8 +24,18 @@ case "${ZIPDEPTH_VARIANT:-384}" in
         model_height=512
         model_name=ZipDepthBaseNPU512x512
         ;;
+    672x384)
+        model_width=672
+        model_height=384
+        model_name=ZipDepthBaseNPU672x384
+        ;;
+    896x512)
+        model_width=896
+        model_height=512
+        model_name=ZipDepthBaseNPU896x512
+        ;;
     *)
-        echo "ZIPDEPTH_VARIANT must be 384 or 512" >&2
+        echo "ZIPDEPTH_VARIANT must be 384, 512, 672x384, or 896x512" >&2
         exit 64
         ;;
 esac
