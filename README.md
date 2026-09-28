@@ -51,6 +51,12 @@ The backend was not recorded for the other six samples.
 
 ![MESS frame using ZipDepth Base NPU through MPSGraph](images/examples/zipdepth.png)
 
+### ZipDepth Base NPU 896 x 512 — MPSGraph
+
+This 1920 x 1080 rendered frame uses the 896 x 512 fixed model tensor.
+
+![MESS frame using ZipDepth Base NPU at 896 x 512 through MPSGraph](images/examples/zipdepth-896x512-mpsgraph-readme.png)
+
 ### ZipDepth Base NPU 1920 x 1088 — MPSGraph
 
 This 1920 x 1080 rendered frame uses the 1920 x 1088 fixed model tensor.
