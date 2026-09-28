@@ -73,6 +73,15 @@ cast and estimates 98.24% Neural Engine cost under CPU plus Neural Engine,
 similar to the baseline's 98.03%. CPU plus GPU places all reported-cost
 operations on the GPU. These estimates are not runtime traces.
 
+## Qualitative example
+
+This MESS-rendered frame confirms that the optional 448 x 336 FP16-input
+MPSGraph engine produces a useful depth-driven contour treatment. It is a
+qualitative example, not a matched raw-depth comparison or performance result;
+the surrounding effect chain contributes to the rendered image.
+
+![MESS frame using Depth Anything V2 Small at 448 x 336 with an FP16 MPSGraph input](../../images/examples/da2-448x336-fp16-mpsgraph.png)
+
 ## Required realtime comparison
 
 Use a Release build, the same prerecorded source, and the same effect settings

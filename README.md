@@ -53,6 +53,12 @@ The backend was not recorded for the other six samples.
 
 ![MESS frame using Depth Anything V2 Small through Core ML](images/examples/da2-coreml.png)
 
+### Depth Anything V2 Small 448 x 336 FP16 input — MPSGraph
+
+This 1920 x 1080 rendered frame uses the experimental planar FP16 graph input.
+
+![MESS frame using Depth Anything V2 Small at 448 x 336 with an FP16 MPSGraph input](images/examples/da2-448x336-fp16-mpsgraph.png)
+
 ### Depth Anything 3 Small 392 x 392 — MPSGraph
 
 ![MESS frame using Depth Anything 3 Small at 392 x 392 through MPSGraph](images/examples/da3-small-392-mpsgraph.png)
