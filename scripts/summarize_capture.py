@@ -33,7 +33,8 @@ def main() -> None:
         median = statistics.median(values)
         output = f"{metric}: median={median:.3f}"
         if metric.endswith("_fps"):
-            output += f" implied_ms={1000.0 / median:.3f}"
+            implied_milliseconds = statistics.median(1000.0 / value for value in values)
+            output += f" implied_ms={implied_milliseconds:.3f}"
         print(output)
 
 

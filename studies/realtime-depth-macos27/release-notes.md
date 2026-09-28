@@ -33,7 +33,7 @@ attached graph packages. See the
 for the complete diagnostics, build-versus-runtime distinction, and reproduction
 command.
 
-## Realtime MESS medians
+## Realtime MESS MPSGraph medians
 
 | Engine | Model time | Complete depth-source time | 60-frame presentation rate |
 | --- | ---: | ---: | ---: |
@@ -44,5 +44,22 @@ command.
 These captures used different live workloads. See the tagged study source for raw
 captures, full caveats, build instructions, provenance, and licenses. The DA3
 capture metadata does not identify whether 392 x 392 or 518 x 518 was active.
+
+## Standalone DA2 compute-unit medians
+
+These synchronous still-image measurements used the same custom DA2 Small
+448 x 336 package. Input preparation and output readback were outside the timed
+calls. The two rows used different sampling protocols and should be read as
+separate comparisons.
+
+| Core ML compute units | Core ML | Paired MPSGraph | Sampling |
+| --- | ---: | ---: | --- |
+| `.cpuAndGPU` | 14.86 ms | 14.50 ms | Eight images; seven interleaved calls per backend per image, first two discarded; median of per-image medians |
+| `.cpuAndNeuralEngine` | 23.01 ms | 15.51 ms | One image; 32 interleaved calls per backend, first 12 discarded |
+
+The compute-unit setting identifies the devices Core ML may use; it does not
+prove that every operation ran on the named accelerator. These standalone
+measurements predate the macOS 27 realtime captures and are not directly
+comparable with the table above.
 
 Verify all downloaded archives with `SHA256SUMS.txt` before unpacking.

@@ -4,12 +4,13 @@ Recorded 2026-09-25 on an Apple M1 Max running macOS 27.0 with Xcode 27.0
 (build 27A266a). The MESS realtime session targeted 60 fps and used the
 MPSMediaPipe face backend.
 
-## Result
+## Realtime MPSGraph capture results
 
 ZipDepth had the lowest depth cost in the captured MESS sessions. Depth Anything
 V2 held the 60 fps presentation target with a median complete depth-source cost
 of 17.23 ms. The user-labelled DA3 Small run was the heaviest and presented at a
-56.71 fps median over its 60-frame window.
+56.71 fps median over its 60-frame window. All three rows below used the
+MPSGraph backend; this table contains no Core ML measurements.
 
 | MPSGraph engine | Capture duration | Samples | Median model time | Median depth-source time | Median presentation rate |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -22,13 +23,28 @@ faster and its median complete depth-source time was about 5.9x faster. DA2's
 complete depth-source median was about 1.9x faster than captured DA3 and 3.2x
 slower than ZipDepth.
 
-## How the capture was summarized
+## How the realtime capture was measured
 
-MESS wrote the current timing values approximately once per second. The sample at
-`elapsed_s = 0` was excluded. Each reported fps value is `1000 / operation_ms`;
-it is an operation-time equivalent, not a count of delivered depth frames. The
-model and depth-source fields are updated by adjacent callbacks and sampled
-independently, so their medians can appear slightly out of order.
+MESS instrumented each completed depth request while its diagnostic capture was
+active. For MPSGraph, model time spans graph encoding through the graph completion
+callback and can include queued preprocessing dependencies. Complete depth-source
+time runs from the app worker's request start through the completed graph result;
+the graph realtime path reports only after its final GPU command buffer finishes.
+
+The capture wrote the latest timing values approximately once per second as fps
+equivalents computed by `1000 / operation_ms`. The summarizer:
+
+1. reads `streams/engine-stats.jsonl`;
+2. excludes the initial sample where `elapsed_s < 1`;
+3. converts each operation's sampled fps equivalent back to milliseconds; and
+4. takes the median of those per-sample milliseconds. Presentation rate remains
+   the median of its sampled fps values.
+
+These values describe sampled operation latency. They are not counts of delivered
+depth frames. The presentation rate is MESS's rolling 60-frame presentation
+average sampled at the same interval. Model and depth-source fields are updated
+by adjacent callbacks and sampled independently, so their medians can appear
+slightly out of order.
 
 Run the checked-in summarizer against a raw capture with:
 
@@ -54,14 +70,42 @@ identities therefore come from the user-assigned directory names. In particular,
 the DA3 capture does not prove whether the 392 x 392 or 518 x 518 variant was
 active.
 
-## Standalone conversion measurements
+## Standalone DA2 compute-unit comparisons
+
+The DA2 Core ML compute-unit results came from synchronous still-image harnesses,
+not the realtime MESS captures above. Both comparisons used the same custom
+`DepthAnythingV2SmallRealtime` package at 448 x 336 and an MPSGraph executable
+compiled with `.level0`. Input preparation and output readback were outside the
+timed calls.
+
+| Comparison | Core ML compute units | Source and sampling | Core ML median | Paired MPSGraph median |
+| --- | --- | --- | ---: | ---: |
+| GPU | `.cpuAndGPU` | Eight images (`demo04`, `demo05`, `demo10`, `demo13`–`demo17`); seven interleaved predictions per backend per image, first two discarded; median of the eight per-image medians | 14.86 ms | 14.50 ms |
+| Neural Engine | `.cpuAndNeuralEngine` | `demo02`; 32 interleaved predictions per backend, first 12 discarded | 23.01 ms | 15.51 ms |
+
+The GPU comparison produced zero absolute output difference across all 11 images
+used during its broader numerical validation, including the three initial images
+that were not included in the timing aggregate. The Neural Engine comparison was
+not bit-identical: MAE was 0.00425, RMSE was 0.00873, and maximum absolute
+difference was 0.18555, with no nonfinite values.
+
+`.cpuAndNeuralEngine` configures the devices Core ML may use; it does not prove
+that every operation ran on the Neural Engine. These standalone comparisons were
+performed on the M1 Max under macOS 26.5.2 with Xcode 26.6 and predate the macOS
+27 realtime captures. They are useful evidence about the relative DA2 routes,
+but are not directly comparable with the realtime table. Current MESS builds use
+`.cpuAndGPU` for DA2 Core ML and no longer switch that model to
+`.cpuAndNeuralEngine` when other Vision workloads change. The original harness
+and raw per-call timing samples are not included in this repository; the table
+preserves its recorded protocol and aggregate results.
+
+## Other standalone conversion measurements
 
 These warm medians came from different small harnesses and exclude the full MESS
 pipeline. Compare routes within a row more strongly than values between rows.
 
 | Model | Fixed input | Core ML CPU + GPU | MPSGraph `.level0` | Context |
 | --- | ---: | ---: | ---: | --- |
-| Depth Anything V2 Small | 448 x 336 | 14.86 ms | 14.50 ms | Interleaved inference over 11 still images |
 | ZipDepth Base NPU | 384 x 384 | 12.96 ms | 3.48 ms | Preliminary raw-model probes |
 | DA3 Small native | 518 x 518 | 23.94 ms | 40.4 ms | Core ML validator and separate graph probe |
 | DA3 Small reduced | 392 x 392 | 16.69 ms | 15.22 ms | Core ML validator and separate graph probe |
@@ -87,7 +131,18 @@ command, and possible lower-target approaches.
 
 ## Next measurement
 
-A controlled comparison should replay the same source segment with identical face
-and effect workload, record the exact model/backend selection in capture metadata,
-and capture depth request and completion deltas so delivered depth fps can be
-measured directly.
+A controlled DA2 comparison should use three separate launches:
+
+1. Core ML with `.cpuAndGPU`;
+2. Core ML with an explicit diagnostic `.cpuAndNeuralEngine` selection; and
+3. MPSGraph `.level0`.
+
+Each launch should replay the same source segment at the same output size and
+target frame rate, with identical foreground-mask, face, and effect settings.
+Allow the model to warm up before starting a capture, then record the same
+duration for every route. Capture metadata should include the exact model,
+backend, Core ML compute units, source identity, output dimensions, and enabled
+analysis workloads. The stats stream should also record depth request and
+completion deltas so delivered depth fps can be measured directly. Production
+DA2 should remain fixed to `.cpuAndGPU`; the Neural Engine route should be an
+explicit diagnostic choice rather than workload-driven switching.
