@@ -1,8 +1,10 @@
 # Apple Silicon Depth Optimization Plan
 
-**Status:** Proposed. The baseline exporters, packages, MPSGraph conversion,
-MESS variants, and initial measurements exist. Compute-residency auditing and
-model-authoring experiments have not started.
+**Status:** In progress. The baseline exporters, packages, MPSGraph conversion,
+MESS variants, and initial measurements exist. Milestone 1 is complete. Its
+[compute-plan findings](apple-silicon-depth-optimization/compute-plan-findings.md)
+defer the ZipDepth structural ablation because the current packages already
+show high Neural Engine placement. The FP16 MPSGraph input experiment is next.
 
 ## Objective
 
@@ -45,8 +47,10 @@ Static inspection gives these hypotheses:
 - DA2 expresses attention as separate linear, matrix-multiply, softmax, and
   matrix-multiply operations. Its 769-token attention dimension is not aligned
   to 64 bytes, and the graph includes rank-five QKV tensors.
-- DA3 already preserves native `scaled_dot_product_attention`. That is favorable
-  for the GPU and is not evidence of a favorable Neural Engine graph.
+- DA3 already preserves native `scaled_dot_product_attention`. The compute-plan
+  audit found that the operation is supported on CPU, GPU, and Neural Engine in
+  the current runtime; `.all` places the first block on GPU and the other eleven
+  on Neural Engine.
 - The current MPSGraph depth package accepts planar FP32 RGB and casts to FP16
   internally. The Metal pack stage can potentially write FP16 directly.
 - Current model weights are small enough that activation and execution cost are
@@ -90,24 +94,25 @@ Engine, GPU, and CPU before rewriting any model.
 
 ### Actionable steps
 
-- [ ] Add a small Swift command-line tool under `scripts/tools/` that compiles
+- [x] Add a small Swift command-line tool under `scripts/tools/` that compiles
   or loads a Core ML model and creates `MLComputePlan` instances for
   `.cpuAndNeuralEngine`, `.cpuAndGPU`, and `.all`.
-- [ ] Recursively enumerate functions, blocks, and operations in the compiled
+- [x] Recursively enumerate functions, blocks, and operations in the compiled
   ML Program.
-- [ ] Emit JSON containing each operation's type, output shapes, data types,
+- [x] Emit JSON containing each operation's type, bindings, output names,
   preferred compute device, supported compute devices, and estimated cost when
-  Core ML provides it.
-- [ ] Generate a readable Markdown summary from the same JSON rather than
+  Core ML provides it. Core ML's public value-type API does not expose tensor
+  shapes or data types, so correlate those through the source MIL inventory.
+- [x] Generate a readable Markdown summary from the same JSON rather than
   maintaining a second hand-authored result.
-- [ ] Audit ZipDepth at 384 x 384, 896 x 512, and 1536 x 864 first.
-- [ ] Audit DA2 at 448 x 336 as the control for its observed slow Neural Engine
+- [x] Audit ZipDepth at 384 x 384, 896 x 512, and 1536 x 864 first.
+- [x] Audit DA2 at 448 x 336 as the control for its observed slow Neural Engine
   configuration.
-- [ ] Audit DA3 only after the tool works for the first two families; DA3 is a
+- [x] Audit DA3 only after the tool works for the first two families; DA3 is a
   diagnostic comparison rather than the first optimization target.
-- [ ] Correlate CPU-preferred or high-cost operations with the inspected MIL
+- [x] Correlate CPU-preferred or high-cost operations with the inspected MIL
   graph, including the remaining FP32 multiplication.
-- [ ] Check in the tool, exact invocation, JSON reports, and generated summary.
+- [x] Check in the tool, exact invocation, JSON reports, and generated summary.
 
 ### Gate
 
@@ -116,7 +121,20 @@ units. Proceed to a Neural Engine rewrite only when the compute plan identifies
 a significant CPU/GPU partition, transfer boundary, or expensive unsupported
 operation that the rewrite is intended to remove.
 
+### Outcome
+
+The audit found no significant ZipDepth CPU fallback after input conversion.
+It also found high Neural Engine placement for DA2 and DA3. See the
+[findings](apple-silicon-depth-optimization/compute-plan-findings.md) and raw
+reports. Runtime measurements remain authoritative because `MLComputePlan` is
+an anticipated placement and relative-cost estimate rather than a trace.
+
 ## Milestone 2: ZipDepth Neural Engine ablations
+
+**Disposition:** Deferred after Milestone 1. The compute plan assigns every
+ZipDepth operation after input scale/cast to the Neural Engine under CPU plus
+Neural Engine. Do not create these variants unless new runtime profiling points
+to a specific global-context cost or a quality experiment requires them.
 
 **Goal:** determine whether ZipDepth's global-context blocks are responsible
 for fallback or partition cost, and whether removing them retains acceptable

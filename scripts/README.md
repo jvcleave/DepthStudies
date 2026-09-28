@@ -14,6 +14,10 @@ All three use `common/convert_coreml_to_mpsgraph.sh` only for the final conversi
 of one named `.mlpackage`. Source revisions, weights, patches, dependencies,
 shapes, validation, and supported variants stay in the owning model directory.
 
+`tools/coreml-compute-plan/` contains the Swift command used to audit Core ML's
+anticipated per-operation compute placement for the optimization study. It is
+independent of the model-family conversion environments.
+
 Generated files go under the ignored `build/` directory by default. Scripts
 refuse to replace existing model outputs so a previous validated artifact is not
 silently destroyed. Use a new model-specific build root for a clean rebuild.

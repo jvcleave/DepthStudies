@@ -21,7 +21,9 @@ for end-to-end export and conversion commands.
 
 The [Apple silicon depth optimization plan](studies/apple-silicon-depth-optimization-plan.md)
 turns the initial results into staged Core ML residency, ZipDepth, and DA2
-experiments with explicit quality and performance gates.
+experiments with explicit quality and performance gates. Its first
+[compute-plan audit](studies/apple-silicon-depth-optimization/compute-plan-findings.md)
+records anticipated CPU, GPU, and Neural Engine placement for six packages.
 
 Each model family has its own entry point. Depth Anything V2 carries its fixed
 source patch and exporter, DA3 pins the tagged conversion fork and its numerical
