@@ -152,6 +152,17 @@ scaling. [Third-party notices](../THIRD_PARTY_NOTICES.md) record model sources
 and licenses. Each family has its own depth scale; the raw numbers should not
 be compared as though they all measure distance in the same units.
 
+**The saved Depth Anything 3 images use the earlier display mapping.** That
+mapping displayed direct depth with a fixed scale, making closer objects darker
+and leaving much of the black-to-white range unused. DA2 and ZipDepth display
+closer objects brighter. The application correction converts Depth Anything 3
+to inverse depth with a fixed gain, so its previews and effects follow the same
+near/far direction. It avoids adjusting contrast independently for each frame.
+Both Core ML and MPSGraph use the correction. The images and timings below
+predate it; new application captures are needed to assess the corrected output.
+Matching direction does not make effect thresholds equal physical distances
+across models. Brightness alone should not be used to rank depth quality.
+
 ## Changes we tried
 
 The starting models already have fixed input sizes and use 16-bit calculations.
@@ -799,6 +810,8 @@ These starting changes have not each had a separate speed test.
 | NPU | Neural processing unit. “Base NPU” is part of the tested ZipDepth model's name. |
 | FP16 / FP32 | Floating-point numbers stored in 16 or 32 bits. Here the labels identify the MPSGraph input type; both versions already use 16-bit model calculations and output. |
 | DA2 / DA3 | File/report abbreviations for Depth Anything V2 Small and Depth Anything 3 Small. |
+| Direct / inverse depth | Direct depth increases for farther objects. Inverse depth increases for closer objects. The application uses the latter convention so closer objects appear brighter. Neither guarantees distances in meters. |
+| Gain | A fixed multiplier used to adjust a model's output for the application. |
 | V2 | Version 2, as used in the name Depth Anything V2. |
 | M1 Max | The Apple processor in the Mac Studio used for these tests. |
 | RGB | Red, green, and blue: the three image color channels. |
