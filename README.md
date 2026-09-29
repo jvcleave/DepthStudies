@@ -1,5 +1,20 @@
 # DepthStudies
 
+
+# Human notes:
+
+This is a large dump of exploratory stuff around depth processing. Here's my current opinion
+
+- ZipDepth is extremely fast but can be very blotchy. Higher rez input does help but starts to effect performance dramatically over 800 high variants
+- MPSGraph stuff bypasses a conversion from MTLTextures to CVPixelBuffers and back which is likely helpful. These variants seem to help
+- DA2 looks good even at the lower resolutions and is pretty fast. However if I start to add other heavy Vision stuff there is contention with what seems to be ANE/GPU starvation. 
+- DA3 is weird. stuff is darker in my pipeline and not any faster with whatever I have tried here. 
+- Some of the conversions to MPSGraph apparently require macos27. ZipDepth doesn't but the current uploads do until I rebuild them 
+- I'm personally narrowing it down to DA2 and ZipDepth
+
+
+# Agent notes:
+
 DepthStudies collects reproducible Apple-platform depth-model conversions,
 runtime artifacts, and measurements used while evaluating depth engines for
 MESS.
